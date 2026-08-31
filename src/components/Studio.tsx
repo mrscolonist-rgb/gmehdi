@@ -161,9 +161,8 @@ export function Studio({
         />
       </label>
 
-      {/* Record / transcript directly under session name */}
       {mode !== 'derive' ? (
-        <div className="space-y-2 rounded-xl border border-stone-200 bg-white p-3">
+        <div className="space-y-2">
           <Recorder
             disabled={!canRecord}
             onAudio={(blobs, mimeType, durationSec) => {
