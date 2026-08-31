@@ -23,7 +23,7 @@ Do **not** persist notes on disk. Browser `localStorage` only (`src/storage.ts`)
 - Clinician sets **session name** before recording (`Studio` session name field).
 - One `sessionId` can hold **multiple documents** (H&P + GPCCMP + ADHD + referral letters) from the same transcript.
 - Library groups by session name. “Add / Generate {template}” reuses the session transcript.
-- Referral letters need specialty + reason/condition fields (`ReferralFields.tsx`) before generate.
+- Referral letters: always pure scribe + concise. Specialty + reason chosen from `/api/extract-referral-reasons` suggestions (`ReferralFields.tsx`). Letter scoped to that reason only.
 - Session helpers live in `src/sessions.ts`.
 
 ## File size

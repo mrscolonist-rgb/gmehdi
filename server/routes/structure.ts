@@ -65,14 +65,18 @@ function referralBlock(styleId: string, referral?: ReferralIn | null): string {
 - output_type: ${outputType}
 - brevity_level: ${brevity}
 - consultation_note: the transcript (and EHR / patient context blocks) below
-- context: the clinician-pasted patient context block below (if any)`;
+- context: the clinician-pasted patient context block below (if any)
+
+SCOPE: Include ONLY content related to continuing_condition for this specialty. Omit unrelated consult content.`;
   }
   return `REFERRAL INPUT PARAMETERS:
 - specialty: ${referral.specialty || ''}
 - referral_reason: ${referral.referralReason || ''}
 - output_type: ${outputType}
 - consultation_note: the transcript (and EHR / patient context blocks) below
-- context: the clinician-pasted patient context block below (if any)`;
+- context: the clinician-pasted patient context block below (if any)
+
+SCOPE: Include ONLY content related to referral_reason for this specialty. Omit unrelated consult content.`;
 }
 
 router.post('/api/structure', async (req, res) => {

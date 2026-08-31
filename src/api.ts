@@ -62,6 +62,19 @@ export async function structureNote(input: {
   return data.data;
 }
 
+export async function extractReferralReasons(input: {
+  transcript: string;
+  patientContext?: string;
+  mode: 'new' | 'continuing';
+}): Promise<{ reasons: string[]; suggestedSpecialty: string }> {
+  const res = await fetch('/api/extract-referral-reasons', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return parseJson<{ reasons: string[]; suggestedSpecialty: string }>(res);
+}
+
 export async function extractEhr(imageBase64: string, mimeType = 'image/jpeg'): Promise<EhrContext> {
   const res = await fetch('/api/extract-ehr', {
     method: 'POST',

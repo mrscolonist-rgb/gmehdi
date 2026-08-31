@@ -151,9 +151,9 @@ export const TEMPLATES: NoteTemplate[] = [
     id: 'referral_new',
     label: 'Referral (new)',
     shortLabel: 'New specialist letter',
-    description: 'New referral letter. No clinical assumptions. Specialty and reason required.',
+    description: 'New referral letter. Pure scribe + concise. Pick specialty and reason from the note.',
     defaultAssistance: 'pure_scribe',
-    defaultDetail: 'standard',
+    defaultDetail: 'concise',
     sections: [
       {
         id: 'sec_ref_opening',
@@ -180,9 +180,9 @@ export const TEMPLATES: NoteTemplate[] = [
     id: 'referral_continuing',
     label: 'Referral (continuing)',
     shortLabel: 'Ongoing specialist care',
-    description: 'Continuing-care letter for an established specialist relationship.',
+    description: 'Continuing-care letter. Pure scribe + concise. Pick specialty and condition from the note.',
     defaultAssistance: 'pure_scribe',
-    defaultDetail: 'standard',
+    defaultDetail: 'concise',
     sections: [
       {
         id: 'sec_refc_opening',

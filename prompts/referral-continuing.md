@@ -25,6 +25,10 @@ PROCESSING RULES
 - Even if continuing_condition is not mentioned in the current consultation, acknowledge it as the reason for referral
 - Use context for historical information about the condition if not in the current note
 
+SCOPE FILTER (critical)
+- The selected continuing_condition is the sole clinical focus of this letter.
+- Exclude unrelated problems from consultation_note unless they directly affect specialist management of continuing_condition.
+
 CONTENT SELECTION
 If brevity_level = "standard":
 - Brief history of continuing_condition if provided

@@ -7,6 +7,7 @@ import health from './server/routes/health.ts';
 import transcribe from './server/routes/transcribe.ts';
 import structure from './server/routes/structure.ts';
 import extractEhr from './server/routes/extract-ehr.ts';
+import extractReferralReasons from './server/routes/extract-referral-reasons.ts';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
@@ -19,6 +20,7 @@ app.use(health);
 app.use(transcribe);
 app.use(structure);
 app.use(extractEhr);
+app.use(extractReferralReasons);
 
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

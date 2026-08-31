@@ -22,14 +22,15 @@ PROCESSING RULES
 - When context conflicts with consultation_note, context overrides
 - Generate exactly one referral letter per request
 
-CONTENT RULES
-- Include only explicitly stated information
+CONTENT RULES / SCOPE FILTER (critical)
+- The selected referral_reason is the sole clinical focus of this letter.
+- Include only information that is clinically related to that referral_reason and useful to the named specialty.
+- Exclude all other problems, medications, exams, and investigations from consultation_note even if documented — unless they directly affect the referred problem (e.g. relevant comorbidity or interacting drug).
 - Present findings exactly as documented without interpretation
 - Organize by clinical relevance to referral_reason
 - Tailor content emphasis to specialty
 - Present chronologically within each problem area
 - Group related clinical information together
-- Exclude unrelated information even if in consultation_note
 
 OUTPUT FORMATTING
 If output_type = "full_letter":

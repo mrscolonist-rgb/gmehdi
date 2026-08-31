@@ -84,16 +84,20 @@ export function Studio({
     setDetail(t.defaultDetail);
   }
 
+  const letter = isReferralTemplate(templateId);
+  const sourceForReasons =
+    mode === 'derive' ? prior?.transcript || '' : paste || prior?.transcript || '';
+
   function draft(audio: Draft['audio'] = null): StudioSubmit {
     return {
       templateId,
-      assistance,
-      detail,
+      assistance: letter ? 'pure_scribe' : assistance,
+      detail: letter ? 'concise' : detail,
       patientContext,
       ehr,
       paste,
       sessionName: sessionName.trim(),
-      referral: isReferralTemplate(templateId) ? referral : null,
+      referral: letter ? referral : null,
       audio,
       prior,
       mode,
@@ -108,7 +112,6 @@ export function Studio({
   const canStructurePaste = !busy && nameOk && refOk && hasSource;
   const canRecord = !busy && nameOk && refOk;
   const templateLocked = mode === 'resume' || Boolean(busy);
-  const letter = isReferralTemplate(templateId);
 
   const heading =
     mode === 'resume'
@@ -150,6 +153,8 @@ export function Studio({
         <ReferralFields
           templateId={templateId}
           value={referral}
+          sourceText={sourceForReasons}
+          patientContext={patientContext}
           disabled={Boolean(busy)}
           onChange={setReferral}
         />
