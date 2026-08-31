@@ -1,20 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Header } from './components/Header.tsx';
-import { Studio, type StudioMode, type StudioSubmit } from './components/Studio.tsx';
+import { Studio, type StudioSubmit } from './components/Studio.tsx';
 import { NoteEditor } from './components/NoteEditor.tsx';
 import { Library } from './components/Library.tsx';
 import { fetchHealth } from './api.ts';
-import { loadNotes, removeNote, removeSession, saveNotes, upsertNote } from './storage.ts';
+import { loadNotes, removeNote, upsertNote } from './storage.ts';
 import { assembleNote, mergeTranscript, structureFromTranscript, transcribeBlobs } from './pipeline.ts';
-import { renameSession, syncSessionTranscript } from './sessions.ts';
-import { templateById } from './data/templates.ts';
-import type { HealthStatus, ScribeDocument, TemplateId } from './types.ts';
+import type { HealthStatus, ScribeDocument } from './types.ts';
 
 export default function App() {
   const [notes, setNotes] = useState<ScribeDocument[]>(() => loadNotes());
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [view, setView] = useState<'studio' | 'editor'>('studio');
-  const [studioMode, setStudioMode] = useState<StudioMode>('new');
   const [resume, setResume] = useState<ScribeDocument | null>(null);
   const [library, setLibrary] = useState(false);
   const [busy, setBusy] = useState('');
@@ -22,9 +19,6 @@ export default function App() {
   const [health, setHealth] = useState<HealthStatus | null>(null);
 
   const current = notes.find((n) => n.id === currentId) || null;
-  const siblingIds = current
-    ? notes.filter((n) => n.sessionId === current.sessionId).map((n) => n.templateId)
-    : [];
 
   useEffect(() => {
     fetchHealth().then(setHealth).catch(() => setHealth({ status: 'error', hasApiKey: false }));
@@ -37,70 +31,22 @@ export default function App() {
 
   function newSession() {
     setResume(null);
-    setStudioMode('new');
     setError('');
     setView('studio');
   }
 
-  async function generateSibling(source: ScribeDocument, templateId: TemplateId) {
-    setError('');
-    setLibrary(false);
-    const t = templateById(templateId);
-    try {
-      setBusy(`Structuring ${t.label}…`);
-      const structured = await structureFromTranscript({
-        transcript: source.transcript,
-        templateId,
-        assistanceDegree: t.defaultAssistance,
-        detailLevel: t.defaultDetail,
-        ehrContext: source.ehrContext,
-        patientContext: source.patientContext,
-      });
-      const note = assembleNote({
-        sessionId: source.sessionId,
-        sessionName: source.sessionName,
-        templateId,
-        assistanceDegree: t.defaultAssistance,
-        detailLevel: t.defaultDetail,
-        transcript: source.transcript,
-        patientContext: source.patientContext,
-        ehrContext: source.ehrContext,
-        audioDurationSec: source.audioDurationSec,
-        structured,
-      });
-      persist(note);
-      setResume(null);
-      setStudioMode('new');
-      setView('editor');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to generate document');
-      setView('editor');
-      setCurrentId(source.id);
-    } finally {
-      setBusy('');
-    }
-  }
-
   async function run(draft: StudioSubmit) {
     setError('');
-    if (!draft.sessionName.trim()) {
-      setError('Enter a session name first.');
-      return;
-    }
     try {
-      let transcript =
-        draft.mode === 'derive' ? draft.prior?.transcript || '' : draft.paste.trim();
+      let transcript = draft.paste.trim();
       let duration = draft.prior?.audioDurationSec || 0;
-
-      if (draft.mode !== 'derive' && draft.audio?.blobs.length) {
+      if (draft.audio?.blobs.length) {
         transcript = await transcribeBlobs(draft.audio.blobs, draft.audio.mimeType, (i, n) =>
           setBusy(`Transcribing chunk ${i} of ${n}…`),
         );
         duration += draft.audio.durationSec;
       }
-      if (draft.mode === 'resume') {
-        transcript = mergeTranscript(draft.prior?.transcript || '', transcript);
-      }
+      transcript = mergeTranscript(draft.prior?.transcript || '', transcript);
       if (!transcript) throw new Error('No transcript. Record, upload, or paste dialogue.');
 
       setBusy('Structuring note…');
@@ -112,13 +58,9 @@ export default function App() {
         ehrContext: draft.ehr,
         patientContext: draft.patientContext,
       });
-
-      const replaceId = draft.mode === 'resume' ? draft.prior?.id : undefined;
       const note = assembleNote({
-        id: replaceId,
-        sessionId: draft.prior?.sessionId,
-        sessionName: draft.sessionName,
-        createdAt: draft.mode === 'resume' ? draft.prior?.createdAt : undefined,
+        id: draft.prior?.id,
+        createdAt: draft.prior?.createdAt,
         templateId: draft.templateId,
         assistanceDegree: draft.assistance,
         detailLevel: draft.detail,
@@ -128,18 +70,8 @@ export default function App() {
         audioDurationSec: duration,
         structured,
       });
-
-      if (draft.mode === 'resume' && note.sessionId) {
-        setNotes((prev) => {
-          const synced = syncSessionTranscript(prev, note.sessionId, transcript, duration);
-          return upsertNote(synced, note);
-        });
-        setCurrentId(note.id);
-      } else {
-        persist(note);
-      }
+      persist(note);
       setResume(null);
-      setStudioMode('new');
       setView('editor');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to generate note');
@@ -157,36 +89,16 @@ export default function App() {
         onNew={newSession}
         onLibrary={() => setLibrary(true)}
       />
-      {busy && view === 'editor' ? (
-        <p className="bg-emerald-50 px-4 py-2 text-center text-sm text-emerald-900">{busy}</p>
-      ) : null}
-      {error && view === 'editor' ? (
-        <p className="bg-red-50 px-4 py-2 text-center text-sm text-red-700">{error}</p>
-      ) : null}
       {view === 'studio' || !current ? (
-        <Studio
-          mode={studioMode}
-          prior={resume}
-          busy={busy}
-          error={error}
-          onSubmit={(d) => void run(d)}
-        />
+        <Studio prior={resume} busy={busy} error={error} onSubmit={(d) => void run(d)} />
       ) : (
         <NoteEditor
           doc={current}
-          siblingTemplateIds={siblingIds}
           onChange={persist}
-          onRenameSession={(name) => {
-            const next = renameSession(notes, current.sessionId, name);
-            saveNotes(next);
-            setNotes(next);
-          }}
           onResume={() => {
             setResume(current);
-            setStudioMode('resume');
             setView('studio');
           }}
-          onGenerateAnother={(templateId) => void generateSibling(current, templateId)}
         />
       )}
       {library ? (
@@ -196,7 +108,6 @@ export default function App() {
           onOpen={(id) => {
             setCurrentId(id);
             setResume(null);
-            setStudioMode('new');
             setView('editor');
             setLibrary(false);
           }}
@@ -206,17 +117,6 @@ export default function App() {
               setCurrentId(null);
               setView('studio');
             }
-          }}
-          onDeleteSession={(sessionId) => {
-            setNotes((prev) => removeSession(prev, sessionId));
-            if (current?.sessionId === sessionId) {
-              setCurrentId(null);
-              setView('studio');
-            }
-          }}
-          onGenerateAnother={(sourceId, templateId) => {
-            const source = notes.find((n) => n.id === sourceId);
-            if (source) void generateSibling(source, templateId);
           }}
         />
       ) : null}

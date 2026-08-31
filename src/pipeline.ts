@@ -33,8 +33,6 @@ export function mergeTranscript(prior: string, next: string): string {
 
 export function assembleNote(opts: {
   id?: string;
-  sessionId?: string;
-  sessionName: string;
   createdAt?: string;
   templateId: TemplateId;
   assistanceDegree: AssistanceDegree;
@@ -46,13 +44,9 @@ export function assembleNote(opts: {
   structured: Pick<ScribeDocument, 'title' | 'subtitle' | 'summary' | 'sections' | 'advisories'>;
 }): ScribeDocument {
   const now = new Date().toISOString();
-  const sessionId = opts.sessionId || `sess_${Date.now()}`;
-  const sessionName = opts.sessionName.trim() || 'Untitled session';
   return {
     id: opts.id || `note_${Date.now()}`,
-    sessionId,
-    sessionName,
-    title: opts.structured.title || sessionName,
+    title: opts.structured.title || 'Untitled note',
     subtitle: opts.structured.subtitle || '',
     summary: opts.structured.summary || '',
     templateId: opts.templateId,

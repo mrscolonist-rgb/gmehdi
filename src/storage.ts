@@ -1,5 +1,4 @@
 import type { ScribeDocument } from './types.ts';
-import { migrateNote } from './sessions.ts';
 
 const KEY = 'myscribe_notes_v1';
 
@@ -8,10 +7,7 @@ export function loadNotes(): ScribeDocument[] {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as ScribeDocument[];
-    if (!Array.isArray(parsed)) return [];
-    const migrated = parsed.map(migrateNote);
-    saveNotes(migrated);
-    return migrated;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -30,12 +26,6 @@ export function upsertNote(notes: ScribeDocument[], note: ScribeDocument): Scrib
 
 export function removeNote(notes: ScribeDocument[], id: string): ScribeDocument[] {
   const next = notes.filter((n) => n.id !== id);
-  saveNotes(next);
-  return next;
-}
-
-export function removeSession(notes: ScribeDocument[], sessionId: string): ScribeDocument[] {
-  const next = notes.filter((n) => n.sessionId !== sessionId);
   saveNotes(next);
   return next;
 }
