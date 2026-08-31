@@ -1,14 +1,12 @@
 /**
  * Model IDs — edit this file only to change Gemini models in AI Studio.
  *
- * Transcribe: gemini-3.5-transcribe (recorded / synchronous STT via generateContent
- * + audioTranscriptionConfig). Not the Live stream model. Not Batch inference
- * (Google documents Batch as unsupported for this model family).
+ * Transcribe primary: gemini-3.5-transcribe (recorded STT, non-diarised).
+ * Transcribe fallback: gemini-3.5-flash (multimodal audio + prompt) when primary
+ * fails, returns empty, or is unavailable on free tier — so Stop & transcribe
+ * still works. Structure + BP vision stay on Flash.
  *
- * Structure + BP vision stay on Flash (multimodal notes / images).
- *
- * Do NOT use gemini-3.7-flash — that ID is invalid.
- * Live captions would be gemini-3.5-transcribe-live (different API; not used here).
+ * Not Live stream. Not Batch inference (unsupported for the Transcribe family).
  *
  * Docs:
  * https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-3-5-transcribe/
@@ -16,6 +14,8 @@
  */
 export const MODELS = {
   transcribe: 'gemini-3.5-transcribe',
+  /** Free-tier / outage backup — same Flash path that previously did all STT. */
+  transcribeFallback: 'gemini-3.5-flash',
   structure: 'gemini-3.5-flash',
   vision: 'gemini-3.5-flash',
 } as const;

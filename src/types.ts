@@ -114,5 +114,10 @@ export interface SessionGroup {
 export interface HealthStatus {
   status: string;
   hasApiKey: boolean;
-  models?: { transcribe: string; structure: string; vision: string };
+  models?: {
+    transcribe: string;
+    transcribeFallback?: string;
+    structure: string;
+    vision: string;
+  };
 }

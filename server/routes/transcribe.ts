@@ -1,8 +1,44 @@
 import { Router } from 'express';
 import { MODELS, MAX_CHUNK_BYTES } from '../config.ts';
-import { generateTranscript, hasApiKey } from '../gemini.ts';
+import { generateText, generateTranscript, hasApiKey, inlinePart } from '../gemini.ts';
+import { loadPrompt } from '../prompts.ts';
 
 const router = Router();
+
+/** Primary dedicated STT, then Flash+prompt so free-tier / empty responses still yield text. */
+async function transcribeWithFallback(
+  payload: string,
+  mimeType: string,
+): Promise<{ transcript: string; model: string; usedFallback: boolean }> {
+  try {
+    const primary = await generateTranscript({
+      model: MODELS.transcribe,
+      audioBase64: payload,
+      mimeType,
+    });
+    if (primary.trim()) {
+      return { transcript: primary, model: MODELS.transcribe, usedFallback: false };
+    }
+    console.warn('Primary STT returned empty; trying Flash fallback');
+  } catch (err) {
+    console.warn('Primary STT failed; trying Flash fallback:', err);
+  }
+
+  const fallback = await generateText({
+    model: MODELS.transcribeFallback,
+    parts: [inlinePart(payload, mimeType), { text: loadPrompt('transcribe.md') }],
+  });
+  if (!fallback.trim()) {
+    throw new Error(
+      'Transcription returned empty text from both gemini-3.5-transcribe and Flash fallback.',
+    );
+  }
+  return {
+    transcript: fallback,
+    model: MODELS.transcribeFallback,
+    usedFallback: true,
+  };
+}
 
 router.post('/api/transcribe', async (req, res) => {
   try {
@@ -26,13 +62,8 @@ router.post('/api/transcribe', async (req, res) => {
       });
     }
 
-    const transcript = await generateTranscript({
-      model: MODELS.transcribe,
-      audioBase64: payload,
-      mimeType,
-    });
-
-    res.json({ success: true, transcript });
+    const result = await transcribeWithFallback(payload, mimeType);
+    res.json({ success: true, ...result });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Transcription failed';
     console.error('Transcription error:', error);

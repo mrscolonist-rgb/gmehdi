@@ -120,7 +120,7 @@ export function Studio({
       setPaste(text);
       setAddedDurationSec(durationSec);
     } catch (e) {
-      setPaste('');
+      // Keep any prior transcript; recording itself never depended on the API.
       setAddedDurationSec(0);
       throw e;
     } finally {

@@ -8,7 +8,7 @@ This is a slim GP medical scribe for Google AI Studio Build (free tier). Cursor 
 | --- | --- |
 | Clinical note wording / evidence rules | `prompts/hp-brief.md`, `prompts/gpccmp.md`, `prompts/adhd.md` |
 | Referral letter rules | `prompts/referral-new.md`, `prompts/referral-continuing.md` |
-| Transcription or BP screenshot instructions | `server/gemini.ts` (`generateTranscript` / audioTranscriptionConfig), `prompts/ehr-bp.md` |
+| Transcription or BP screenshot instructions | `server/routes/transcribe.ts` (STT + Flash fallback), `prompts/transcribe.md`, `prompts/ehr-bp.md` |
 | Pure scribe vs balanced vs senior colleague | `prompts/assistance.md` |
 | Template labels, sections, default assistance/detail | `src/data/templates.ts` |
 | Gemini model IDs | `server/config.ts` only |
@@ -39,7 +39,7 @@ Referral letters: same copy helper joins Opening/Body/Closing as paragraph prose
 
 ## Audio length
 
-Long ADHD consults (30–60 min) are split in the browser (`src/utils/audio.ts` + `chunkAudio.ts`) into ~6 min / ~9 MB chunks, transcribed one-by-one.
+Long ADHD consults (30–60 min) are split in the browser (`src/utils/audio.ts` + `chunkAudio.ts`) into ~6 min / ~9 MB chunks, transcribed one-by-one. Recording never calls Gemini — only Stop & transcribe / Upload does. STT tries `gemini-3.5-transcribe` then falls back to `gemini-3.5-flash` (`server/routes/transcribe.ts`). A failed chunk must not discard the rest of the transcript.
 
 ## Record → Generate (do not collapse)
 

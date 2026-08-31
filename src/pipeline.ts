@@ -18,13 +18,31 @@ export async function transcribeBlobs(
 ): Promise<string> {
   const chunks = await blobsToChunks(blobs);
   const parts: string[] = [];
+  const failed: number[] = [];
   for (let i = 0; i < chunks.length; i++) {
     onProgress?.(i + 1, chunks.length);
-    const b64 = await blobToBase64(chunks[i]);
-    const text = await transcribeChunk(b64, chunks[i].type || mimeType);
-    if (text) parts.push(text);
+    try {
+      const b64 = await blobToBase64(chunks[i]);
+      const text = await transcribeChunk(b64, chunks[i].type || mimeType);
+      if (text.trim()) parts.push(text.trim());
+      else failed.push(i + 1);
+    } catch {
+      // Keep going — one bad chunk must not wipe a long consult.
+      failed.push(i + 1);
+    }
   }
-  return parts.join('\n\n').trim();
+  if (!parts.length) {
+    throw new Error(
+      chunks.length > 1
+        ? `Transcription failed for all ${chunks.length} audio chunks. Check API key / free-tier quota, then retry Stop & transcribe or Upload.`
+        : 'Transcription failed. Check API key / free-tier quota, then retry or Upload.',
+    );
+  }
+  let text = parts.join('\n\n').trim();
+  if (failed.length) {
+    text += `\n\n[Note: audio chunk(s) ${failed.join(', ')} of ${chunks.length} could not be transcribed — review those minutes manually.]`;
+  }
+  return text;
 }
 
 export function mergeTranscript(prior: string, next: string): string {
