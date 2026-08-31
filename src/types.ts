@@ -1,4 +1,5 @@
 import type { AsrsAnswers } from './data/asrs.ts';
+import type { DifferentialState } from './data/differential.ts';
 import type { Dsm5CriteriaAState } from './data/dsm5CriteriaA.ts';
 import type { Dsm5FormulationState } from './data/dsm5Formulation.ts';
 
@@ -71,6 +72,7 @@ export interface AdhdToolsState {
   asrs?: AsrsAnswers;
   dsm5?: Dsm5CriteriaAState;
   formulation?: Dsm5FormulationState;
+  differential?: DifferentialState;
 }
 
 export interface ScribeDocument {

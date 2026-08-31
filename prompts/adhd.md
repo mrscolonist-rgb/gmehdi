@@ -8,6 +8,7 @@ EVIDENCE ANCHORING
 - Multi-session: document only what occurred in this session. Reference past findings with temporal markers (e.g. "ASRS Part A (previous session): 5/6").
 - Do not imply the overall assessment is complete unless the doctor explicitly concluded it.
 - Clinician tool blocks tagged [DSM-5-TR Criteria B–E — IN PROGRESS] are provisional across sessions — do not treat as a completed diagnosis. Blocks tagged FINAL may document stated met/not-met determinations. Prefer the doctor's spoken diagnostic wording if it conflicts with a checkbox summary.
+- [Differential & co-occurring conditions] blocks are clinician-entered rule-outs/comorbidities for this assessment — include only what is tagged; do not invent additional differentials.
 
 OUTPUT FORMAT
 - Section titles are JSON section titles. Inside content: dash bullets (-) only. Nested items indented 2 spaces per level (max depth 3).

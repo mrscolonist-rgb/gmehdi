@@ -1,4 +1,8 @@
 import { mergeAsrsIntoToolsContent } from '../data/asrs.ts';
+import {
+  emptyDifferential,
+  mergeDifferentialIntoContent,
+} from '../data/differential.ts';
 import { emptyDsm5CriteriaA, mergeDsm5IntoToolsContent } from '../data/dsm5CriteriaA.ts';
 import {
   emptyDsm5Formulation,
@@ -16,18 +20,26 @@ export function mergeAdhdToolsIntoContent(
   return next;
 }
 
-/** Sync B–E formulation into Diagnostic Impression (and optionally Tools). */
 export function mergeAdhdFormulationIntoDiagnosis(
   content: string,
   tools: AdhdToolsState | null | undefined,
 ): string {
-  return mergeFormulationIntoContent(content, tools?.formulation || emptyDsm5Formulation());
+  let next = mergeFormulationIntoContent(
+    content,
+    tools?.formulation || emptyDsm5Formulation(),
+  );
+  next = mergeDifferentialIntoContent(next, tools?.differential || emptyDifferential());
+  return next;
 }
 
-/** Also keep a copy of the formulation block in Tools for BP paste completeness. */
 export function mergeAdhdFormulationIntoTools(
   content: string,
   tools: AdhdToolsState | null | undefined,
 ): string {
-  return mergeFormulationIntoContent(content, tools?.formulation || emptyDsm5Formulation());
+  let next = mergeFormulationIntoContent(
+    content,
+    tools?.formulation || emptyDsm5Formulation(),
+  );
+  next = mergeDifferentialIntoContent(next, tools?.differential || emptyDifferential());
+  return next;
 }
