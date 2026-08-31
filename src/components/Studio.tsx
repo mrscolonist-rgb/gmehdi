@@ -138,14 +138,7 @@ export function Studio({
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
-      <div>
-        <h1 className="text-xl font-semibold">{heading}</h1>
-        <p className="text-sm text-stone-600">
-          {mode === 'derive'
-            ? 'Uses the existing transcript. Choose a template, then Generate.'
-            : '1) Name the session → 2) Record / upload / paste → 3) Stop transcribes only → 4) Choose template (and referral reason if needed) → 5) Generate.'}
-        </p>
-      </div>
+      <h1 className="text-xl font-semibold">{heading}</h1>
 
       <label className="block text-sm">
         <span className="font-medium">Session name</span>
