@@ -50,6 +50,10 @@ export interface DocumentSection {
 
 export interface ScribeDocument {
   id: string;
+  /** Groups multiple notes (e.g. H&P + GPCCMP) from one consult. */
+  sessionId: string;
+  /** Clinician-chosen label shown in the library (set at session start). */
+  sessionName: string;
   title: string;
   subtitle: string;
   summary: string;
@@ -64,6 +68,13 @@ export interface ScribeDocument {
   createdAt: string;
   updatedAt: string;
   audioDurationSec: number;
+}
+
+export interface SessionGroup {
+  sessionId: string;
+  sessionName: string;
+  updatedAt: string;
+  docs: ScribeDocument[];
 }
 
 export interface HealthStatus {

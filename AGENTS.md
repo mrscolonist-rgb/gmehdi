@@ -17,6 +17,13 @@ Do **not** add templates beyond the three IDs: `hp_brief`, `gpccmp`, `adhd_multi
 Do **not** add a specialist copilot, mentors, Medication Review, MHCP, or other PMS besides Best Practice.
 Do **not** persist notes on disk. Browser `localStorage` only (`src/storage.ts`).
 
+## Sessions (do not remove)
+
+- Clinician sets **session name** before recording (`Studio` session name field).
+- One `sessionId` can hold **multiple documents** (H&P + GPCCMP + ADHD) from the same transcript.
+- Library groups by session name. “Add / Generate {template}” reuses the session transcript.
+- Session helpers live in `src/sessions.ts`.
+
 ## File size
 
 Keep every source file under ~250 lines. Split rather than grow `server.ts` or `App.tsx`.
