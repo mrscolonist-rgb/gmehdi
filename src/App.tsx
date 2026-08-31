@@ -99,6 +99,17 @@ export default function App() {
     }
   }
 
+  async function transcribeAudio(blobs: Blob[], mimeType: string): Promise<string> {
+    setError('');
+    try {
+      return await transcribeBlobs(blobs, mimeType, (i, n) =>
+        setBusy(`Transcribing chunk ${i} of ${n}…`),
+      );
+    } finally {
+      setBusy('');
+    }
+  }
+
   async function run(draft: StudioSubmit) {
     setError('');
     if (!draft.sessionName.trim()) {
@@ -106,20 +117,22 @@ export default function App() {
       return;
     }
     try {
-      let transcript =
-        draft.mode === 'derive' ? draft.prior?.transcript || '' : draft.paste.trim();
       let duration = draft.prior?.audioDurationSec || 0;
+      duration += draft.addedDurationSec || 0;
 
-      if (draft.mode !== 'derive' && draft.audio?.blobs.length) {
-        transcript = await transcribeBlobs(draft.audio.blobs, draft.audio.mimeType, (i, n) =>
-          setBusy(`Transcribing chunk ${i} of ${n}…`),
-        );
-        duration += draft.audio.durationSec;
+      let transcript = '';
+      if (draft.mode === 'derive') {
+        transcript = draft.prior?.transcript || '';
+      } else if (draft.mode === 'resume') {
+        // paste holds the new segment (or pasted add-on); merge onto the prior session transcript.
+        transcript = draft.paste.trim()
+          ? mergeTranscript(draft.prior?.transcript || '', draft.paste.trim())
+          : draft.prior?.transcript || '';
+      } else {
+        transcript = draft.paste.trim();
       }
-      if (draft.mode === 'resume') {
-        transcript = mergeTranscript(draft.prior?.transcript || '', transcript);
-      }
-      if (!transcript) throw new Error('No transcript. Record, upload, or paste dialogue.');
+
+      if (!transcript) throw new Error('No transcript. Record, upload, or paste dialogue first.');
 
       setBusy(isReferralTemplate(draft.templateId) ? 'Generating referral letter…' : 'Structuring note…');
       const structured = await structureFromTranscript({
@@ -191,6 +204,7 @@ export default function App() {
           preferredTemplateId={deriveTemplateId}
           busy={busy}
           error={error}
+          onTranscribe={transcribeAudio}
           onSubmit={(d) => void run(d)}
         />
       ) : (

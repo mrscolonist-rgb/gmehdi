@@ -17,7 +17,7 @@ import { EMPTY_REFERRAL, ReferralFields, referralReady } from './ReferralFields.
 
 export type StudioMode = 'new' | 'resume' | 'derive';
 
-interface Draft {
+export interface StudioSubmit {
   templateId: TemplateId;
   assistance: AssistanceDegree;
   detail: DetailLevel;
@@ -26,22 +26,19 @@ interface Draft {
   paste: string;
   sessionName: string;
   referral: ReferralOptions | null;
-  audio: { blobs: Blob[]; mimeType: string; durationSec: number } | null;
-}
-
-export interface StudioSubmit extends Draft {
+  /** Extra seconds from the recording just transcribed (added onto prior on resume). */
+  addedDurationSec: number;
   prior?: ScribeDocument | null;
   mode: StudioMode;
-  replaceNoteId?: string | null;
 }
 
 interface Props {
   mode?: StudioMode;
   prior?: ScribeDocument | null;
-  /** When opening derive for a specific template (e.g. referral letter). */
   preferredTemplateId?: TemplateId | null;
   busy: string;
   error: string;
+  onTranscribe: (blobs: Blob[], mimeType: string) => Promise<string>;
   onSubmit: (draft: StudioSubmit) => void;
 }
 
@@ -51,11 +48,11 @@ export function Studio({
   preferredTemplateId = null,
   busy,
   error,
+  onTranscribe,
   onSubmit,
 }: Props) {
   const seed = prior ? templateById(prior.templateId) : templateById('hp_brief');
-  const initialId =
-    preferredTemplateId || (mode === 'derive' ? 'gpccmp' : seed.id);
+  const initialId = preferredTemplateId || (mode === 'derive' ? 'gpccmp' : seed.id);
   const [sessionName, setSessionName] = useState(
     prior?.sessionName || suggestSessionName(prior?.ehrContext?.patientName),
   );
@@ -67,9 +64,13 @@ export function Studio({
   const [patientContext, setPatientContext] = useState(prior?.patientContext || '');
   const [ehr, setEhr] = useState<EhrContext | null>(prior?.ehrContext || null);
   const [paste, setPaste] = useState('');
+  const [addedDurationSec, setAddedDurationSec] = useState(0);
+  const [localBusy, setLocalBusy] = useState('');
   const [referral, setReferral] = useState<ReferralOptions>(
     prior?.referral || EMPTY_REFERRAL,
   );
+
+  const busyMsg = busy || localBusy;
 
   useEffect(() => {
     if (!prior && !sessionName.trim() && ehr?.patientName) {
@@ -88,7 +89,7 @@ export function Studio({
   const sourceForReasons =
     mode === 'derive' ? prior?.transcript || '' : paste || prior?.transcript || '';
 
-  function draft(audio: Draft['audio'] = null): StudioSubmit {
+  function draft(): StudioSubmit {
     return {
       templateId,
       assistance: letter ? 'pure_scribe' : assistance,
@@ -98,20 +99,35 @@ export function Studio({
       paste,
       sessionName: sessionName.trim(),
       referral: letter ? referral : null,
-      audio,
+      addedDurationSec,
       prior,
       mode,
-      replaceNoteId: mode === 'resume' ? prior?.id : null,
     };
   }
 
+  async function handleAudio(blobs: Blob[], mimeType: string, durationSec: number) {
+    setLocalBusy('Transcribing audio…');
+    try {
+      const text = await onTranscribe(blobs, mimeType);
+      if (!text.trim()) throw new Error('Transcription returned empty text.');
+      setPaste(text);
+      setAddedDurationSec(durationSec);
+    } catch (e) {
+      setPaste('');
+      setAddedDurationSec(0);
+      throw e;
+    } finally {
+      setLocalBusy('');
+    }
+  }
+
   const nameOk = sessionName.trim().length > 0;
-  const refOk = !isReferralTemplate(templateId) || referralReady(templateId, referral);
+  const refOk = !letter || referralReady(templateId, referral);
   const hasSource =
     mode === 'derive' ? Boolean(prior?.transcript) : Boolean(paste.trim());
-  const canStructurePaste = !busy && nameOk && refOk && hasSource;
-  const canRecord = !busy && nameOk && refOk;
-  const templateLocked = mode === 'resume' || Boolean(busy);
+  const canGenerate = !busyMsg && nameOk && refOk && hasSource;
+  const canRecord = !busyMsg && nameOk && mode !== 'derive';
+  const templateLocked = mode === 'resume' || Boolean(busyMsg);
 
   const heading =
     mode === 'resume'
@@ -120,33 +136,72 @@ export function Studio({
         ? 'Another document from this session'
         : 'New consult';
 
-  const blurb =
-    mode === 'resume'
-      ? 'New audio is transcribed and appended, then this note is re-structured.'
-      : mode === 'derive'
-        ? 'Uses the same transcript and session name. Pick a template (note or referral letter).'
-        : 'Name the session first. You can add more document types (including referral letters) from the same consult later.';
-
   return (
     <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
       <div>
         <h1 className="text-xl font-semibold">{heading}</h1>
-        <p className="text-sm text-stone-600">{blurb}</p>
+        <p className="text-sm text-stone-600">
+          {mode === 'derive'
+            ? 'Uses the existing transcript. Choose a template, then Generate.'
+            : '1) Name the session → 2) Record / upload / paste → 3) Stop transcribes only → 4) Choose template (and referral reason if needed) → 5) Generate.'}
+        </p>
       </div>
 
       <label className="block text-sm">
         <span className="font-medium">Session name</span>
-        <span className="ml-1 text-stone-500">(required — how this consult appears in the library)</span>
+        <span className="ml-1 text-stone-500">(required)</span>
         <input
           type="text"
           value={sessionName}
           onChange={(e) => setSessionName(e.target.value)}
-          disabled={Boolean(busy)}
+          disabled={Boolean(busyMsg)}
           className="mt-1 w-full rounded-lg border border-stone-200 p-2.5 text-base font-medium"
           placeholder="e.g. Arthur Pendelton — T2DM review"
           autoFocus={mode === 'new'}
         />
       </label>
+
+      {mode !== 'derive' ? (
+        <>
+          <Recorder
+            disabled={!canRecord}
+            onAudio={(blobs, mimeType, durationSec) => {
+              void handleAudio(blobs, mimeType, durationSec).catch((e) => {
+                alert(e instanceof Error ? e.message : 'Transcription failed');
+              });
+            }}
+          />
+          <label className="block text-sm">
+            <span className="font-medium">Transcript</span>
+            <span className="ml-1 text-stone-500">
+              (filled after Stop / upload, or paste manually)
+            </span>
+            <textarea
+              rows={6}
+              value={paste}
+              onChange={(e) => {
+                setPaste(e.target.value);
+                if (!e.target.value.trim()) setAddedDurationSec(0);
+              }}
+              className="mt-1 w-full rounded-lg border border-stone-200 p-2 font-mono text-xs"
+              placeholder="After you stop recording, the transcript appears here…"
+            />
+          </label>
+          {paste.trim() ? (
+            <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+              {mode === 'resume'
+                ? `New audio segment transcribed (${paste.trim().length} chars). Generate will append it to the existing session transcript.`
+                : `Transcript ready (${paste.trim().length} characters).`}{' '}
+              Choose the template below
+              {letter ? ', pick specialty and referral reason,' : ','} then press <strong>Generate</strong>.
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <p className="rounded-lg bg-stone-100 px-3 py-2 text-xs text-stone-600">
+          Source transcript: {prior?.transcript?.length || 0} characters · session kept as-is
+        </p>
+      )}
 
       <TemplatePicker value={templateId} disabled={templateLocked} onChange={pickTemplate} />
       {letter ? (
@@ -155,7 +210,7 @@ export function Studio({
           value={referral}
           sourceText={sourceForReasons}
           patientContext={patientContext}
-          disabled={Boolean(busy)}
+          disabled={Boolean(busyMsg)}
           onChange={setReferral}
         />
       ) : null}
@@ -192,54 +247,30 @@ export function Studio({
         </div>
       ) : null}
 
-      {mode !== 'derive' ? (
-        <>
-          <Recorder
-            disabled={!canRecord}
-            onAudio={(blobs, mimeType, durationSec) =>
-              onSubmit(draft({ blobs, mimeType, durationSec }))
-            }
-          />
-          <label className="block text-sm">
-            <span className="font-medium">Or paste a transcript / consultation note</span>
-            <textarea
-              rows={6}
-              value={paste}
-              onChange={(e) => setPaste(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-stone-200 p-2 font-mono text-xs"
-              placeholder="Paste consult dialogue or note text…"
-            />
-          </label>
-        </>
-      ) : (
-        <p className="rounded-lg bg-stone-100 px-3 py-2 text-xs text-stone-600">
-          Source transcript: {prior?.transcript?.length || 0} characters · session kept as-is
-        </p>
-      )}
-
       <button
         type="button"
-        disabled={!canStructurePaste}
-        onClick={() => onSubmit(draft(null))}
+        disabled={!canGenerate}
+        onClick={() => onSubmit(draft())}
         className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
       >
-        {mode === 'derive'
-          ? letter
-            ? 'Generate referral letter'
-            : 'Generate this document'
-          : letter
-            ? 'Generate letter from pasted text'
-            : 'Structure pasted transcript'}
+        {letter ? 'Generate referral letter' : 'Generate note'}
       </button>
       {!nameOk ? (
-        <p className="text-sm text-amber-800">Enter a session name before recording or structuring.</p>
+        <p className="text-sm text-amber-800">Enter a session name before recording.</p>
       ) : null}
-      {nameOk && !refOk ? (
-        <p className="text-sm text-amber-800">
-          Fill specialty and {templateId === 'referral_continuing' ? 'continuing condition' : 'referral reason'}.
+      {nameOk && !hasSource && mode !== 'derive' ? (
+        <p className="text-sm text-stone-500">
+          Pause only pauses the mic. Stop finishes the recording and runs transcription — it does not
+          generate the note yet.
         </p>
       ) : null}
-      {busy ? <p className="text-sm text-emerald-800">{busy}</p> : null}
+      {nameOk && hasSource && !refOk ? (
+        <p className="text-sm text-amber-800">
+          Fill specialty and{' '}
+          {templateId === 'referral_continuing' ? 'continuing condition' : 'referral reason'}.
+        </p>
+      ) : null}
+      {busyMsg ? <p className="text-sm text-emerald-800">{busyMsg}</p> : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
     </div>
   );

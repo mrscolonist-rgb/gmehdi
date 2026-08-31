@@ -37,4 +37,11 @@ Referral letters: same copy helper joins Opening/Body/Closing as paragraph prose
 
 ## Audio length
 
-Long ADHD consults (30–60 min) are split in the browser (`src/utils/audio.ts` + `chunkAudio.ts`) into ~6 min / ~9 MB chunks, transcribed one-by-one, then **one** `/api/structure` call on the full transcript.
+Long ADHD consults (30–60 min) are split in the browser (`src/utils/audio.ts` + `chunkAudio.ts`) into ~6 min / ~9 MB chunks, transcribed one-by-one.
+
+## Record → Generate (do not collapse)
+
+1. **Stop & transcribe** only fills the transcript box (does not structure).
+2. User chooses template / referral reason after the transcript exists.
+3. **Generate note** / **Generate referral letter** runs `/api/structure` once.
+Do not make Stop auto-generate the document again.
