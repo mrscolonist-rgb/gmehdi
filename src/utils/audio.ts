@@ -14,6 +14,36 @@ function pickMime(): string {
   return '';
 }
 
+function micErrorMessage(err: unknown): string {
+  const name = err instanceof DOMException ? err.name : '';
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+    return 'Microphone blocked. Allow the mic for this site (or open Preview in a new tab), or use Upload / paste.';
+  }
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return 'No microphone found. Plug one in, or use Upload / paste.';
+  }
+  if (name === 'NotReadableError' || name === 'TrackStartError') {
+    return 'Microphone is in use by another app. Close it, or use Upload / paste.';
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return 'Could not start the microphone. Try Upload or paste a transcript.';
+}
+
+/** Prefer processing constraints; fall back to plain audio if the device rejects them. */
+async function openMicStream(): Promise<MediaStream> {
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+  } catch (first) {
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (second) {
+      throw new Error(micErrorMessage(second || first));
+    }
+  }
+}
+
 export function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -36,12 +66,15 @@ export class MicRecorder {
   constructor(private onTick?: (seconds: number) => void) {}
 
   async start(): Promise<void> {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error(
+        'Microphone API unavailable in this browser. Use Upload or paste a transcript.',
+      );
+    }
     this.segments = [];
     this.duration = 0;
     this.mime = pickMime();
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
+    this.stream = await openMicStream();
     this.isRecording = true;
     this.isPaused = false;
     this.beginRecorder();

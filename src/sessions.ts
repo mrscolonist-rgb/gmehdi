@@ -78,5 +78,6 @@ export function suggestSessionName(ehrName?: string): string {
     year: 'numeric',
   });
   const who = ehrName?.trim();
-  return who ? `${who} — ${day}` : '';
+  // Always seed a name so Record is enabled; clinician can edit before/after.
+  return who ? `${who} — ${day}` : day;
 }

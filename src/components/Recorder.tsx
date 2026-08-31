@@ -7,29 +7,44 @@ interface Props {
   onAudio: (blobs: Blob[], mimeType: string, durationSec: number) => void;
 }
 
+const inIframe = typeof window !== 'undefined' && window.self !== window.top;
+
 export function Recorder({ disabled, onAudio }: Props) {
   const rec = useRef<MicRecorder | null>(null);
   const [seconds, setSeconds] = useState(0);
   const [live, setLive] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [error, setError] = useState('');
 
   async function start() {
+    setError('');
     const mic = new MicRecorder(setSeconds);
     rec.current = mic;
-    await mic.start();
-    setLive(true);
-    setPaused(false);
+    try {
+      await mic.start();
+      setLive(true);
+      setPaused(false);
+    } catch (e) {
+      rec.current = null;
+      setLive(false);
+      setError(e instanceof Error ? e.message : 'Could not start recording.');
+    }
   }
 
   async function stop() {
     const mic = rec.current;
     if (!mic) return;
-    const result = await mic.stop();
-    rec.current = null;
-    setLive(false);
-    setPaused(false);
-    setSeconds(0);
-    onAudio(result.segments, result.mimeType, result.duration);
+    setError('');
+    try {
+      const result = await mic.stop();
+      rec.current = null;
+      setLive(false);
+      setPaused(false);
+      setSeconds(0);
+      onAudio(result.segments, result.mimeType, result.duration);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not stop recording.');
+    }
   }
 
   return (
@@ -84,12 +99,22 @@ export function Recorder({ disabled, onAudio }: Props) {
             disabled={disabled || live}
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) onAudio([file], file.type || 'audio/webm', 0);
+              if (file) {
+                setError('');
+                onAudio([file], file.type || 'audio/webm', 0);
+              }
               e.target.value = '';
             }}
           />
         </label>
       </div>
+      {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
+      {!error && inIframe && !live ? (
+        <p className="mt-2 text-xs text-stone-500">
+          Preview iframe often blocks the mic — allow when prompted, open Preview in a new tab, or use
+          Upload / paste.
+        </p>
+      ) : null}
     </div>
   );
 }
