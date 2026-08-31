@@ -1,10 +1,28 @@
 import type { ScribeDocument, SessionGroup } from './types.ts';
+import {
+  mergeAdhdFormulationIntoDiagnosis,
+  mergeAdhdFormulationIntoTools,
+  mergeAdhdToolsIntoContent,
+} from './utils/adhdToolsNote.ts';
 
-/** Backfill session fields for notes saved before session naming existed. */
+/** Backfill session fields; resync ADHD tool blocks into the right note sections. */
 export function migrateNote(note: ScribeDocument): ScribeDocument {
   const sessionId = note.sessionId || note.id;
   const sessionName = (note.sessionName || note.title || 'Untitled session').trim() || 'Untitled session';
-  return { ...note, sessionId, sessionName };
+  if (note.templateId !== 'adhd_multi_session' || !note.tools) {
+    return { ...note, sessionId, sessionName };
+  }
+  const sections = note.sections.map((s) => {
+    if (s.id === 'sec_adhd_tools') {
+      const withAsrs = mergeAdhdToolsIntoContent(s.content, note.tools);
+      return { ...s, content: mergeAdhdFormulationIntoTools(withAsrs, note.tools) };
+    }
+    if (s.id === 'sec_adhd_diagnosis_plan') {
+      return { ...s, content: mergeAdhdFormulationIntoDiagnosis(s.content, note.tools) };
+    }
+    return s;
+  });
+  return { ...note, sessionId, sessionName, sections };
 }
 
 export function groupBySession(notes: ScribeDocument[]): SessionGroup[] {

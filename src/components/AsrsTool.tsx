@@ -76,6 +76,12 @@ export function AsrsTool({ answers, onChange }: Props) {
   const totals = scoreAsrs(answers);
 
   function setAnswer(id: number, freq: Frequency) {
+    if (answers[id] === freq) {
+      const next = { ...answers };
+      delete next[id];
+      onChange(next);
+      return;
+    }
     onChange({ ...answers, [id]: freq });
   }
 
@@ -85,9 +91,10 @@ export function AsrsTool({ answers, onChange }: Props) {
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-semibold text-stone-900">ASRS-v1.1 Part A (6-item screener)</p>
+        <p className="text-sm font-semibold text-stone-900">ASRS-v1.1 Part A (optional)</p>
         <p className="text-[11px] text-stone-500">
-          Last 6 months. Shaded options score 1 — total auto-calculates. No interpretation.
+          Last 6 months. Click a frequency — it syncs into Assessment Tools as clicked. Click again
+          to clear. Shaded options score 1. No interpretation. Unanswered items stay out of the note.
         </p>
         <div className="mt-2 space-y-2">
           {ASRS_PART_A.map((item) => (
@@ -120,7 +127,8 @@ export function AsrsTool({ answers, onChange }: Props) {
         {partBOpen ? (
           <div className="space-y-3 border-t border-stone-100 p-3">
             <p className="text-[11px] text-stone-500">
-              Frequency only. Summary counts Often / Very Often. No interpretation.
+              Optional. Each frequency syncs into Assessment Tools as clicked. Summary counts Often /
+              Very Often. No interpretation. Unanswered items stay out of the note.
             </p>
             <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
               Inattention

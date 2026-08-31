@@ -26,7 +26,7 @@ Do **not** persist notes on disk. Browser `localStorage` only (`src/storage.ts`)
 - Referral letters: always pure scribe + concise. Specialty + reason chosen from `/api/extract-referral-reasons` suggestions (`ReferralFields.tsx`). Letter scoped to that reason only.
 - Session helpers live in `src/sessions.ts`.
 - Patient context uses on-demand mini-sections (`src/patientContext.ts`). Last-session paste is comparison / follow-up only — prior vitals must not appear as today's findings (`prompts/patient-context.md`).
-- ADHD notes: interactive tools in the note editor — ASRS-v1.1, DSM-5 Criteria A, optional Criteria B–E formulation (`src/data/dsm5Formulation.ts`), and optional differential/co-occurring conditions (`src/data/differential.ts`). Formulation defaults to multi-session **in progress**; final met/not-met only when marked final diagnostic session. Tools sync into Tools + Diagnostic Impression.
+- ADHD notes: all interactive tools are optional — none are required to generate or save a note. ASRS-v1.1 Part A/B sync each clicked frequency into Assessment Tools (`src/data/asrs.ts`). The DSM-5 symptom checklist is Criterion A and syncs ticked symptoms into Diagnostic Impression (`src/data/dsm5CriteriaA.ts`). Optional Criteria B–E formulation (`src/data/dsm5Formulation.ts`), differential (`src/data/differential.ts`), education (`src/data/education.ts`), and pre-treatment safety (`src/data/safety.ts`) also sync when filled. Formulation defaults to multi-session **in progress**; final met/not-met only when marked final diagnostic session.
 
 ## File size
 

@@ -170,22 +170,64 @@ export function scoreAsrs(answers: AsrsAnswers): AsrsTotals {
 
 const ASRS_BLOCK_RE = /\[ASRS-v1\.1\][\s\S]*?\[\/ASRS-v1\.1\]\n*/g;
 
-/** Plain score lines for the Assessment Tools section — facts only. */
+function freqLabel(freq: Frequency): string {
+  return FREQUENCY_OPTIONS.find((o) => o.value === freq)?.label || String(freq);
+}
+
+function answeredItems(items: AsrsItem[], answers: AsrsAnswers, partA: boolean): string[] {
+  const lines: string[] = [];
+  for (const item of items) {
+    const f = answers[item.id];
+    if (f === undefined) continue;
+    const picked = freqLabel(f);
+    if (partA) {
+      const score = itemScorePartA(item, f);
+      lines.push(`- Q${item.id}: ${picked} (${score}) — ${item.text}`);
+    } else {
+      lines.push(`- Q${item.id}: ${picked} — ${item.text}`);
+    }
+  }
+  return lines;
+}
+
+/** Item-level clicks plus totals — Assessment Tools. Unanswered items omitted. */
 export function formatAsrsNoteBlock(answers: AsrsAnswers): string {
   const t = scoreAsrs(answers);
   if (t.partAAnswered === 0 && t.partBAnswered === 0) return '';
   const lines = ['[ASRS-v1.1]'];
-  if (t.partAAnswered > 0) {
+  const partA = answeredItems(ASRS_PART_A, answers, true);
+  if (partA.length) {
+    lines.push('Part A:');
+    lines.push(...partA);
     lines.push(
-      `- ASRS-v1.1 Part A: ${t.partA} / ${t.partAMax} (${t.partAAnswered} answered)`,
+      `- Part A total: ${t.partA} / ${t.partAMax} (${t.partAAnswered} answered)`,
     );
   }
-  if (t.partBAnswered > 0) {
+  const ina = answeredItems(
+    ASRS_PART_B.filter((i) => i.domain === 'inattention'),
+    answers,
+    false,
+  );
+  const hyp = answeredItems(
+    ASRS_PART_B.filter((i) => i.domain === 'hyperactivity'),
+    answers,
+    false,
+  );
+  if (ina.length || hyp.length) {
+    lines.push('Part B:');
+    if (ina.length) {
+      lines.push('Inattention:');
+      lines.push(...ina);
+    }
+    if (hyp.length) {
+      lines.push('Hyperactivity/Impulsivity:');
+      lines.push(...hyp);
+    }
     lines.push(
-      `- ASRS-v1.1 Part B Inattention (Often/Very Often): ${t.partBInattention} / ${t.partBInattentionMax}`,
+      `- Part B Inattention (Often/Very Often): ${t.partBInattention} / ${t.partBInattentionMax}`,
     );
     lines.push(
-      `- ASRS-v1.1 Part B Hyperactivity/Impulsivity (Often/Very Often): ${t.partBHyperactivity} / ${t.partBHyperactivityMax}`,
+      `- Part B Hyperactivity/Impulsivity (Often/Very Often): ${t.partBHyperactivity} / ${t.partBHyperactivityMax}`,
     );
   }
   lines.push('[/ASRS-v1.1]');

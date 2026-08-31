@@ -9,11 +9,15 @@ import {
   emptyDsm5Formulation,
   formulationHasContent,
 } from '../data/dsm5Formulation.ts';
+import { educationHasContent, emptyEducation } from '../data/education.ts';
+import { emptySafety, safetyHasContent } from '../data/safety.ts';
 import type { AdhdToolsState } from '../types.ts';
 import { AsrsTool } from './AsrsTool.tsx';
 import { DifferentialConditions } from './DifferentialConditions.tsx';
 import { Dsm5Formulation } from './Dsm5Formulation.tsx';
 import { Dsm5SymptomChecklist } from './Dsm5SymptomChecklist.tsx';
+import { PatientEducation } from './PatientEducation.tsx';
+import { SafetyAssessment } from './SafetyAssessment.tsx';
 
 interface Props {
   value: AdhdToolsState | null | undefined;
@@ -25,11 +29,15 @@ export function AdhdTools({ value, onChange }: Props) {
   const dsm5 = value?.dsm5 || emptyDsm5CriteriaA();
   const formulation = value?.formulation || emptyDsm5Formulation();
   const differential = value?.differential || emptyDifferential();
+  const education = value?.education || emptyEducation();
+  const safety = value?.safety || emptySafety();
   const hasAsrs = Object.keys(asrs).length > 0;
   const hasDsm5 = scoreDsm5CriteriaA(dsm5).anyChecked;
   const hasForm = formulationHasContent(formulation);
   const hasDiff = differentialHasContent(differential);
-  const hasAny = hasAsrs || hasDsm5 || hasForm || hasDiff;
+  const hasEdu = educationHasContent(education);
+  const hasSafety = safetyHasContent(safety);
+  const hasAny = hasAsrs || hasDsm5 || hasForm || hasDiff || hasEdu || hasSafety;
 
   return (
     <section className="space-y-3 rounded-xl border border-emerald-200 bg-white p-3">
@@ -37,8 +45,10 @@ export function AdhdTools({ value, onChange }: Props) {
         <div>
           <h2 className="text-sm font-semibold text-stone-900">ADHD assessment tools</h2>
           <p className="text-[11px] text-stone-500">
-            Optional. Use across sessions as needed. Formulation stays in progress until you mark the
-            final diagnostic session. Findings sync into the note as plain text.
+            Optional. Use only what you need this session — nothing here is required. ASRS answers
+            sync item-by-item into Assessment Tools. The symptom checklist is Criterion A and syncs
+            into Diagnostic Impression. Formulation stays in progress until you mark the final
+            diagnostic session.
           </p>
         </div>
         {hasAny ? (
@@ -50,6 +60,8 @@ export function AdhdTools({ value, onChange }: Props) {
                 dsm5: emptyDsm5CriteriaA(),
                 formulation: emptyDsm5Formulation(),
                 differential: emptyDifferential(),
+                education: emptyEducation(),
+                safety: emptySafety(),
               })
             }
             className="inline-flex items-center gap-1 text-xs text-stone-500 hover:text-stone-800"
@@ -71,6 +83,14 @@ export function AdhdTools({ value, onChange }: Props) {
       <DifferentialConditions
         value={differential}
         onChange={(next) => onChange({ ...value, differential: next })}
+      />
+      <PatientEducation
+        value={education}
+        onChange={(next) => onChange({ ...value, education: next })}
+      />
+      <SafetyAssessment
+        value={safety}
+        onChange={(next) => onChange({ ...value, safety: next })}
       />
     </section>
   );

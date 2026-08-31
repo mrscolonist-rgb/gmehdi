@@ -81,15 +81,18 @@ export function Dsm5SymptomChecklist({ value, onChange }: Props) {
             <span className="ml-2 text-xs font-normal text-stone-500">
               {totals.inattention}/9 · {totals.hyperImpulsive}/9
             </span>
-          ) : null}
+          ) : (
+            <span className="ml-2 text-xs font-normal text-stone-400">Optional</span>
+          )}
         </span>
         {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </button>
       {open ? (
         <div className="space-y-4 border-t border-stone-100 p-3">
           <p className="text-[11px] text-stone-500">
-            Assessment period: last 6 months. Check if present &quot;often&quot; or more. Adult domain
-            threshold ≥5 (as on the form).
+            Optional. This is DSM-5 Criterion A. Ticked symptoms sync into Diagnostic Impression —
+            not Assessment Tools. Adult domain threshold ≥5 (as on the form). Unticked items stay out
+            of the note.
           </p>
 
           <div>

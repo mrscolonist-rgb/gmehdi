@@ -154,9 +154,15 @@ export function scoreDsm5CriteriaA(state: Dsm5CriteriaAState): Dsm5CriteriaATota
 
 const DSM5_BLOCK_RE = /\[DSM-5-TR Criteria A\][\s\S]*?\[\/DSM-5-TR Criteria A\]\n*/g;
 
+function tickedLines(list: Dsm5Symptom[], checked: Partial<Record<string, boolean>>): string[] {
+  return list.filter((s) => checked[s.id]).map((s) => `- ${s.text}`);
+}
+
+/** Ticked Criterion A symptoms — Diagnostic Impression. Unticked items omitted. */
 export function formatDsm5NoteBlock(state: Dsm5CriteriaAState): string {
   const t = scoreDsm5CriteriaA(state);
   if (!t.anyChecked) return '';
+  const checked = state.checked || {};
   const collateralLabels = COLLATERAL_OPTIONS.filter((o) => state.collateral.includes(o.id)).map(
     (o) => o.label,
   );
@@ -164,12 +170,33 @@ export function formatDsm5NoteBlock(state: Dsm5CriteriaAState): string {
   if (collateralLabels.length) {
     lines.push(`- Collateral: ${collateralLabels.join('; ')}`);
   }
+  const ina = tickedLines(DSM5_INATTENTION, checked);
+  const hyp = tickedLines(
+    DSM5_HYPER_IMPULSE.filter((s) => s.group === 'hyperactivity'),
+    checked,
+  );
+  const imp = tickedLines(
+    DSM5_HYPER_IMPULSE.filter((s) => s.group === 'impulsivity'),
+    checked,
+  );
+  if (ina.length) {
+    lines.push('Inattention:');
+    lines.push(...ina);
+  }
+  if (hyp.length) {
+    lines.push('Hyperactivity:');
+    lines.push(...hyp);
+  }
+  if (imp.length) {
+    lines.push('Impulsivity:');
+    lines.push(...imp);
+  }
   if (t.inattention + t.hyperImpulsive > 0) {
     lines.push(
-      `- Inattention: ${t.inattention} / ${t.inattentionMax}${t.inattentionMet ? ' (domain ≥5)' : ''}`,
+      `- Inattention total: ${t.inattention} / ${t.inattentionMax}${t.inattentionMet ? ' (domain ≥5)' : ''}`,
     );
     lines.push(
-      `- Hyperactivity/Impulsivity: ${t.hyperImpulsive} / ${t.hyperImpulsiveMax}${t.hyperImpulsiveMet ? ' (domain ≥5)' : ''}`,
+      `- Hyperactivity/Impulsivity total: ${t.hyperImpulsive} / ${t.hyperImpulsiveMax}${t.hyperImpulsiveMet ? ' (domain ≥5)' : ''}`,
     );
     lines.push(`- Criterion A: ${t.criterionAMet ? 'Met (≥5 in at least one domain)' : 'Not met'}`);
   }
@@ -177,9 +204,14 @@ export function formatDsm5NoteBlock(state: Dsm5CriteriaAState): string {
   return lines.join('\n');
 }
 
-export function mergeDsm5IntoToolsContent(content: string, state: Dsm5CriteriaAState): string {
+export function mergeDsm5IntoContent(content: string, state: Dsm5CriteriaAState): string {
   const base = (content || '').replace(DSM5_BLOCK_RE, '').trimEnd();
   const block = formatDsm5NoteBlock(state);
   if (!block) return base;
   return base ? `${base}\n\n${block}` : block;
+}
+
+/** Strip a leftover Criteria A block (it belongs in Diagnostic Impression). */
+export function stripDsm5FromContent(content: string): string {
+  return mergeDsm5IntoContent(content, emptyDsm5CriteriaA());
 }

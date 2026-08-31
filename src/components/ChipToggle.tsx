@@ -20,6 +20,7 @@ export function ChipToggle({ options, selected, onToggle }: Props) {
             key={opt.id}
             type="button"
             onClick={() => onToggle(opt.id)}
+            aria-pressed={on}
             className={`rounded-full border px-2 py-0.5 text-[11px] ${
               on
                 ? 'border-emerald-600 bg-emerald-50 font-semibold text-emerald-950'

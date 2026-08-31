@@ -17,6 +17,8 @@ export interface DiffCondition {
   note?: string;
   chips?: DiffChip[];
   texts?: DiffText[];
+  /** When true, chips are mutually exclusive. */
+  single?: boolean;
 }
 
 export interface DiffGroup {

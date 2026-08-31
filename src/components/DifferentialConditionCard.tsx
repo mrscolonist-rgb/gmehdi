@@ -46,10 +46,15 @@ export function DifferentialConditionCard({ condition, value, onChange }: Props)
             <ChipToggle
               options={condition.chips}
               selected={e.chips}
+              single={condition.single}
               onToggle={(id) => {
-                const chips = e.chips.includes(id)
-                  ? e.chips.filter((x) => x !== id)
-                  : [...e.chips, id];
+                const chips = condition.single
+                  ? e.chips.includes(id)
+                    ? []
+                    : [id]
+                  : e.chips.includes(id)
+                    ? e.chips.filter((x) => x !== id)
+                    : [...e.chips, id];
                 patch({ chips });
               }}
             />

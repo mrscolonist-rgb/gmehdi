@@ -2,6 +2,8 @@ import type { AsrsAnswers } from './data/asrs.ts';
 import type { DifferentialState } from './data/differential.ts';
 import type { Dsm5CriteriaAState } from './data/dsm5CriteriaA.ts';
 import type { Dsm5FormulationState } from './data/dsm5Formulation.ts';
+import type { EducationState } from './data/education.ts';
+import type { SafetyState } from './data/safety.ts';
 
 export type TemplateId =
   | 'hp_brief'
@@ -73,6 +75,8 @@ export interface AdhdToolsState {
   dsm5?: Dsm5CriteriaAState;
   formulation?: Dsm5FormulationState;
   differential?: DifferentialState;
+  education?: EducationState;
+  safety?: SafetyState;
 }
 
 export interface ScribeDocument {
