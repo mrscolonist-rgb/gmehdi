@@ -8,7 +8,7 @@ This is a slim GP medical scribe for Google AI Studio Build (free tier). Cursor 
 | --- | --- |
 | Clinical note wording / evidence rules | `prompts/hp-brief.md`, `prompts/gpccmp.md`, `prompts/adhd.md` |
 | Referral letter rules | `prompts/referral-new.md`, `prompts/referral-continuing.md` |
-| Transcription or BP screenshot instructions | `server/routes/transcribe.ts` (STT + Flash fallback), `prompts/transcribe.md`, `prompts/ehr-bp.md` |
+| Transcription or BP screenshot instructions | `server/gemini.ts` (3.5 Transcribe Interactions + transcription_config), `server/routes/transcribe.ts` (Flash fallback), `prompts/transcribe.md`, `prompts/ehr-bp.md` |
 | Pure scribe vs balanced vs senior colleague | `prompts/assistance.md` |
 | Template labels, sections, default assistance/detail | `src/data/templates.ts` |
 | Gemini model IDs | `server/config.ts` only |

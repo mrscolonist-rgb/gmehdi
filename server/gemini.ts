@@ -3,6 +3,7 @@ import {
   GoogleGenAI,
   type GenerateContentConfig,
 } from '@google/genai';
+import { CLINICAL_VOCAB } from './clinicalVocab.ts';
 
 let ai: GoogleGenAI | null = null;
 
@@ -27,9 +28,15 @@ export function inlinePart(data: string, mimeType: string) {
   return { inlineData: { mimeType, data: payload } };
 }
 
+function stripDataUrl(data: string): string {
+  return data.includes('base64,') ? data.split('base64,')[1] : data;
+}
+
 function textFromResponse(response: {
   text?: string | null;
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string; audioTranscription?: { text?: string } }> } }>;
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string; audioTranscription?: { text?: string } }> };
+  }>;
 }): string {
   const direct = (response.text || '').trim();
   if (direct) return direct;
@@ -55,25 +62,83 @@ export async function generateText(opts: {
   return textFromResponse(response);
 }
 
-/** Dedicated STT path: recorded audio, non-diarised, verbatim. */
-export async function generateTranscript(opts: {
+/**
+ * Gemini 3.5 Transcribe — AI Studio / GenAI SDK documented path:
+ * interactions.create + generation_config.transcription_config
+ * (verbatim, no diarization_mode, language hint, custom vocabulary).
+ * @see https://dev.to/googleai/stop-wrestling-with-asr-the-complete-guide-to-gemini-35-transcribe-1m6i
+ */
+async function transcribeViaInteractions(opts: {
+  model: string;
+  audioBase64: string;
+  mimeType: string;
+}): Promise<string> {
+  const interaction = await getAI().interactions.create({
+    model: opts.model,
+    store: false,
+    input: [
+      {
+        type: 'audio',
+        data: stripDataUrl(opts.audioBase64),
+        mime_type: opts.mimeType,
+      },
+    ],
+    generation_config: {
+      transcription_config: {
+        language_codes: ['en-AU'],
+        custom_vocabulary: CLINICAL_VOCAB,
+        // Verbatim, non-diarised: omit diarization_mode and timestamp_granularities.
+        mode: { type: 'verbatim' },
+      },
+    },
+  });
+  return (interaction.output_text || '').trim();
+}
+
+/**
+ * Cloud Agent Platform shape: generateContent + audioTranscriptionConfig.
+ * Kept as secondary if Interactions is unavailable in a given runtime.
+ * @see https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/3-5-transcribe
+ */
+async function transcribeViaGenerateContent(opts: {
   model: string;
   audioBase64: string;
   mimeType: string;
 }): Promise<string> {
   const response = await getAI().models.generateContent({
     model: opts.model,
-    contents: [{ role: 'user', parts: [inlinePart(opts.audioBase64, opts.mimeType)] as never }],
+    contents: [
+      {
+        role: 'user',
+        parts: [inlinePart(opts.audioBase64, opts.mimeType)] as never,
+      },
+    ],
     config: {
       audioTranscriptionConfig: {
-        diarization: false,
-        wordTimestamp: false,
+        // Docs: omit diarization / word timestamps unless needed (we want neither).
         mode: AudioTranscriptionConfigMode.VERBATIM,
         languageCodes: ['en-AU'],
+        customVocabulary: CLINICAL_VOCAB,
       },
     },
   });
   return textFromResponse(response);
+}
+
+/** Dedicated STT: Interactions (docs) → generateContent AudioTranscriptionConfig. */
+export async function generateTranscript(opts: {
+  model: string;
+  audioBase64: string;
+  mimeType: string;
+}): Promise<string> {
+  try {
+    const text = await transcribeViaInteractions(opts);
+    if (text) return text;
+    console.warn('Interactions STT returned empty; trying generateContent path');
+  } catch (err) {
+    console.warn('Interactions STT failed; trying generateContent path:', err);
+  }
+  return transcribeViaGenerateContent(opts);
 }
 
 export async function generateJson<T>(opts: {

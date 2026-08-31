@@ -5,7 +5,11 @@ import { loadPrompt } from '../prompts.ts';
 
 const router = Router();
 
-/** Primary dedicated STT, then Flash+prompt so free-tier / empty responses still yield text. */
+/**
+ * 1) gemini-3.5-transcribe (Interactions + transcription_config per docs)
+ * 2) same model via generateContent audioTranscriptionConfig
+ * 3) gemini-3.5-flash + prompts/transcribe.md (free-tier safety net)
+ */
 async function transcribeWithFallback(
   payload: string,
   mimeType: string,
@@ -19,9 +23,9 @@ async function transcribeWithFallback(
     if (primary.trim()) {
       return { transcript: primary, model: MODELS.transcribe, usedFallback: false };
     }
-    console.warn('Primary STT returned empty; trying Flash fallback');
+    console.warn('gemini-3.5-transcribe returned empty; trying Flash fallback');
   } catch (err) {
-    console.warn('Primary STT failed; trying Flash fallback:', err);
+    console.warn('gemini-3.5-transcribe failed; trying Flash fallback:', err);
   }
 
   const fallback = await generateText({

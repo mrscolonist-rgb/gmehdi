@@ -19,6 +19,6 @@ Prerequisites: Node.js 20+.
 
 - Secret: `GEMINI_API_KEY` (server-side only)
 - `metadata.json` requests microphone + display-capture
-- Model IDs in `server/config.ts`: `gemini-3.5-transcribe` (STT primary) → auto-fallback `gemini-3.5-flash` if primary fails/empty; Flash also for structure + BP vision
+- Models in `server/config.ts`: STT uses `gemini-3.5-transcribe` via Interactions `transcription_config` (verbatim, non-diarised, `en-AU`) → Flash fallback; structure + BP vision on `gemini-3.5-flash`
 
 Do not start from a 1000-line `server.ts`. See `AGENTS.md` for where to edit.
