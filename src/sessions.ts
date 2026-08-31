@@ -1,5 +1,10 @@
-import type { ScribeDocument, SessionGroup } from './types.ts';
-import { applyAdhdToolsToSections } from './utils/adhdToolsNote.ts';
+import type {
+  AdhdToolsState,
+  EhrContext,
+  ScribeDocument,
+  SessionGroup,
+} from './types.ts';
+import { adhdToolsHasContent, applyAdhdToolsToSections } from './utils/adhdToolsNote.ts';
 
 /** Backfill session fields; resync ADHD tool blocks into the right note sections. */
 export function migrateNote(note: ScribeDocument): ScribeDocument {
@@ -14,6 +19,54 @@ export function migrateNote(note: ScribeDocument): ScribeDocument {
     sessionName,
     sections: applyAdhdToolsToSections(note.sections, note.tools),
   };
+}
+
+/** Tools filled during Record / Studio — kept on any session doc for Adult ADHD Generate. */
+export function findSessionTools(
+  notes: ScribeDocument[],
+  sessionId: string,
+): AdhdToolsState | null {
+  for (const n of notes) {
+    if (n.sessionId === sessionId && adhdToolsHasContent(n.tools)) return n.tools || null;
+  }
+  return null;
+}
+
+/**
+ * Mirror consult-scoped fields onto every document in THIS session only.
+ * Never touches other sessionIds (prevents cross-consult mix-ups).
+ */
+export function syncSessionConsult(
+  notes: ScribeDocument[],
+  sessionId: string,
+  fields: {
+    transcript: string;
+    audioDurationSec: number;
+    patientContext: string;
+    ehrContext: EhrContext | null;
+    tools?: AdhdToolsState | null;
+  },
+): ScribeDocument[] {
+  const now = new Date().toISOString();
+  const tools = fields.tools;
+  const hasTools = adhdToolsHasContent(tools);
+  return notes.map((n) => {
+    if (n.sessionId !== sessionId) return n;
+    const nextTools = hasTools ? tools : n.tools;
+    return {
+      ...n,
+      transcript: fields.transcript,
+      audioDurationSec: fields.audioDurationSec,
+      patientContext: fields.patientContext,
+      ehrContext: fields.ehrContext,
+      tools: nextTools,
+      sections:
+        n.templateId === 'adhd_multi_session' && hasTools
+          ? applyAdhdToolsToSections(n.sections, tools)
+          : n.sections,
+      updatedAt: now,
+    };
+  });
 }
 
 export function groupBySession(notes: ScribeDocument[]): SessionGroup[] {
@@ -48,27 +101,15 @@ export function renameSession(
   );
 }
 
-export function syncSessionTranscript(
-  notes: ScribeDocument[],
-  sessionId: string,
-  transcript: string,
-  audioDurationSec: number,
-): ScribeDocument[] {
-  const now = new Date().toISOString();
-  return notes.map((n) =>
-    n.sessionId === sessionId
-      ? { ...n, transcript, audioDurationSec, updatedAt: now }
-      : n,
-  );
-}
-
 export function suggestSessionName(ehrName?: string): string {
-  const day = new Date().toLocaleDateString('en-AU', {
+  const when = new Date().toLocaleString('en-AU', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
   const who = ehrName?.trim();
-  // Always seed a name so Record is enabled; clinician can edit before/after.
-  return who ? `${who} — ${day}` : day;
+  // Date+time keeps same-day consults visually distinct in Library.
+  return who ? `${who} — ${when}` : when;
 }

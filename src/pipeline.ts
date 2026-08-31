@@ -69,15 +69,20 @@ export function assembleNote(opts: {
   structured: Pick<ScribeDocument, 'title' | 'subtitle' | 'summary' | 'sections' | 'advisories'>;
 }): ScribeDocument {
   const now = new Date().toISOString();
-  const sessionId = opts.sessionId || `sess_${Date.now()}`;
+  const uid = () =>
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const sessionId = opts.sessionId || `sess_${uid()}`;
   const sessionName = opts.sessionName.trim() || 'Untitled session';
   const isAdhd = opts.templateId === 'adhd_multi_session';
-  const tools = isAdhd ? opts.tools || null : null;
+  // Keep tools on every session doc (H&P/GPCCMP too) so Adult ADHD can reuse them later.
+  const tools = opts.tools || null;
   const sections = isAdhd
     ? applyAdhdToolsToSections(opts.structured.sections || [], tools)
     : opts.structured.sections || [];
   return {
-    id: opts.id || `note_${Date.now()}`,
+    id: opts.id || `note_${uid()}`,
     sessionId,
     sessionName,
     title: opts.structured.title || sessionName,

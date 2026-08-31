@@ -21,8 +21,9 @@ Do **not** persist notes on disk. Browser `localStorage` only (`src/storage.ts`)
 ## Sessions (do not remove)
 
 - Clinician sets **session name** before recording (`Studio` session name field).
-- One `sessionId` can hold **multiple documents** (H&P + GPCCMP + ADHD + referral letters) from the same transcript.
-- Library groups by session name. “Add / Generate {template}” reuses the session transcript.
+- One `sessionId` can hold **multiple documents** (H&P + GPCCMP + ADHD + referral letters) from the same transcript — each Generate is upserted into `localStorage` (`myscribe_notes_v1`) and listed in Library.
+- **Session isolation:** each New session gets a fresh `sessionId`. Transcript, patient context, BP (`ehrContext`), and ADHD tools are stored on that session only and mirrored to sibling docs via `syncSessionConsult` — never across sessions. Studio remounts on New so UI state cannot leak from the previous consult.
+- Library groups by session name. “Add / Generate {template}” reuses **that session’s** transcript / tools / context / BP capture.
 - Referral letters: always pure scribe + concise. Specialty + reason chosen from `/api/extract-referral-reasons` suggestions (`ReferralFields.tsx`). Letter scoped to that reason only.
 - Session helpers live in `src/sessions.ts`.
 - Patient context uses on-demand mini-sections (`src/patientContext.ts`). Last-session paste is comparison / follow-up only — prior vitals must not appear as today's findings (`prompts/patient-context.md`).

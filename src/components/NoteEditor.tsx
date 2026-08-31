@@ -5,6 +5,7 @@ import { TEMPLATES, isReferralTemplate, templateById } from '../data/templates.t
 import { applyAdhdToolsToSections } from '../utils/adhdToolsNote.ts';
 import { copyDashBullet } from '../utils/dashBullet.ts';
 import { AdhdToolsPanel } from './AdhdToolsPanel.tsx';
+import { SessionSources } from './SessionSources.tsx';
 
 interface Props {
   doc: ScribeDocument;
@@ -93,11 +94,11 @@ export function NoteEditor({
         </div>
       </div>
 
-      {extras.length && doc.transcript?.trim() ? (
+      {extras.length > 0 && doc.transcript?.trim() ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3">
           <p className="text-xs font-semibold text-emerald-900">More documents from this session</p>
           <p className="mt-0.5 text-[11px] text-emerald-800/80">
-            Reuses this transcript — e.g. add a GPCCMP after the H&amp;P note.
+            Reuses this transcript. Each Generate is saved in Library (GPCCMP, Adult ADHD, referrals).
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {extras.map((t) => (
@@ -140,10 +141,7 @@ export function NoteEditor({
           </ul>
         </aside>
       ) : null}
-      <details className="text-sm">
-        <summary className="cursor-pointer text-stone-500">Transcript</summary>
-        <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-stone-100 p-3 text-xs">{doc.transcript}</pre>
-      </details>
+      <SessionSources doc={doc} />
     </div>
   );
 }

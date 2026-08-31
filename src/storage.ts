@@ -3,6 +3,12 @@ import { migrateNote } from './sessions.ts';
 
 const KEY = 'myscribe_notes_v1';
 
+let lastSaveError: string | null = null;
+
+export function getLastSaveError(): string | null {
+  return lastSaveError;
+}
+
 export function loadNotes(): ScribeDocument[] {
   try {
     const raw = localStorage.getItem(KEY);
@@ -17,8 +23,19 @@ export function loadNotes(): ScribeDocument[] {
   }
 }
 
-export function saveNotes(notes: ScribeDocument[]): void {
-  localStorage.setItem(KEY, JSON.stringify(notes));
+/** Persist all documents (H&P, GPCCMP, Adult ADHD, referrals). Returns false on quota/failure. */
+export function saveNotes(notes: ScribeDocument[]): boolean {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(notes));
+    lastSaveError = null;
+    return true;
+  } catch (e) {
+    lastSaveError =
+      e instanceof DOMException && e.name === 'QuotaExceededError'
+        ? 'Browser storage is full. Delete old sessions from Library, then try again.'
+        : 'Could not save notes in this browser. Check private mode / storage settings.';
+    return false;
+  }
 }
 
 export function upsertNote(notes: ScribeDocument[], note: ScribeDocument): ScribeDocument[] {

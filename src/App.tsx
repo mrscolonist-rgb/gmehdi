@@ -4,9 +4,11 @@ import { Studio, type StudioMode, type StudioSubmit } from './components/Studio.
 import { NoteEditor } from './components/NoteEditor.tsx';
 import { Library } from './components/Library.tsx';
 import { fetchHealth } from './api.ts';
-import { loadNotes, removeNote, removeSession, saveNotes, upsertNote } from './storage.ts';
+import { loadNotes, removeNote, removeSession, saveNotes } from './storage.ts';
 import { assembleNote, mergeTranscript, structureFromTranscript, transcribeBlobs } from './pipeline.ts';
-import { renameSession, syncSessionTranscript } from './sessions.ts';
+import { buildSiblingDocument } from './generateSibling.ts';
+import { upsertPersisted } from './persistNote.ts';
+import { findSessionTools, renameSession } from './sessions.ts';
 import { isReferralTemplate, templateById } from './data/templates.ts';
 import type { HealthStatus, ScribeDocument, TemplateId } from './types.ts';
 
@@ -17,10 +19,18 @@ export default function App() {
   const [studioMode, setStudioMode] = useState<StudioMode>('new');
   const [resume, setResume] = useState<ScribeDocument | null>(null);
   const [deriveTemplateId, setDeriveTemplateId] = useState<TemplateId | null>(null);
+  /** Bumps on each New session so Studio remounts with empty consult state. */
+  const [studioEpoch, setStudioEpoch] = useState(0);
   const [library, setLibrary] = useState(false);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [health, setHealth] = useState<HealthStatus | null>(null);
+
+  // Remount Studio when starting a fresh consult or switching resume/derive session.
+  const studioKey =
+    studioMode === 'new'
+      ? `new-${studioEpoch}`
+      : `${studioMode}-${resume?.sessionId || 'none'}-${deriveTemplateId || ''}`;
 
   const current = notes.find((n) => n.id === currentId) || null;
   const siblingIds = current
@@ -32,7 +42,11 @@ export default function App() {
   }, []);
 
   function persist(note: ScribeDocument) {
-    setNotes((prev) => upsertNote(prev, note));
+    setNotes((prev) => {
+      const { notes: next, saveError } = upsertPersisted(prev, note);
+      if (saveError) queueMicrotask(() => setError(saveError));
+      return next;
+    });
     setCurrentId(note.id);
   }
 
@@ -40,6 +54,8 @@ export default function App() {
     setResume(null);
     setDeriveTemplateId(null);
     setStudioMode('new');
+    setCurrentId(null);
+    setStudioEpoch((n) => n + 1);
     setError('');
     setView('studio');
   }
@@ -56,37 +72,14 @@ export default function App() {
   async function generateSibling(source: ScribeDocument, templateId: TemplateId) {
     setError('');
     setLibrary(false);
-    if (isReferralTemplate(templateId)) {
-      openDerive(source, templateId);
-      return;
-    }
-    const t = templateById(templateId);
     try {
-      setBusy(`Structuring ${t.label}…`);
-      const structured = await structureFromTranscript({
-        transcript: source.transcript,
-        templateId,
-        assistanceDegree: t.defaultAssistance,
-        detailLevel: t.defaultDetail,
-        ehrContext: source.ehrContext,
-        patientContext: source.patientContext,
-        referral: null,
-      });
-      const note = assembleNote({
-        sessionId: source.sessionId,
-        sessionName: source.sessionName,
-        templateId,
-        assistanceDegree: t.defaultAssistance,
-        detailLevel: t.defaultDetail,
-        transcript: source.transcript,
-        patientContext: source.patientContext,
-        ehrContext: source.ehrContext,
-        referral: null,
-        audioDurationSec: source.audioDurationSec,
-        tools: templateId === 'adhd_multi_session' ? source.tools || null : null,
-        structured,
-      });
-      persist(note);
+      setBusy(`Structuring ${templateById(templateId).label}…`);
+      const result = await buildSiblingDocument(notes, source, templateId);
+      if (result.kind === 'referral') {
+        openDerive(result.source, result.templateId);
+        return;
+      }
+      persist(result.note);
       setResume(null);
       setDeriveTemplateId(null);
       setStudioMode('new');
@@ -147,6 +140,10 @@ export default function App() {
       });
 
       const replaceId = draft.mode === 'resume' ? draft.prior?.id : undefined;
+      const sessionTools =
+        draft.tools ||
+        (draft.prior ? findSessionTools(notes, draft.prior.sessionId) : null) ||
+        null;
       const note = assembleNote({
         id: replaceId,
         sessionId: draft.prior?.sessionId,
@@ -160,19 +157,12 @@ export default function App() {
         ehrContext: draft.ehr,
         referral: draft.referral,
         audioDurationSec: duration,
-        tools: draft.tools,
+        tools: sessionTools,
         structured,
       });
 
-      if (draft.mode === 'resume' && note.sessionId) {
-        setNotes((prev) => {
-          const synced = syncSessionTranscript(prev, note.sessionId, transcript, duration);
-          return upsertNote(synced, note);
-        });
-        setCurrentId(note.id);
-      } else {
-        persist(note);
-      }
+      // New consult → new sessionId. Resume/derive → same sessionId only.
+      persist(note);
       setResume(null);
       setDeriveTemplateId(null);
       setStudioMode('new');
@@ -201,6 +191,7 @@ export default function App() {
       ) : null}
       {view === 'studio' || !current ? (
         <Studio
+          key={studioKey}
           mode={studioMode}
           prior={resume}
           preferredTemplateId={deriveTemplateId}

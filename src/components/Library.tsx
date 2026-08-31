@@ -35,7 +35,8 @@ export function Library({
           </button>
         </div>
         <p className="mb-3 text-xs text-stone-500">
-          Sessions are named by you. One session can hold several documents (notes and referral letters).
+          Named sessions stay in this browser. Each can hold H&amp;P Brief, GPCCMP, Adult ADHD, and
+          referral letters — every Generate is saved under the session.
         </p>
         {groups.length === 0 ? (
           <p className="text-sm text-stone-500">No sessions yet. Notes stay in this browser only.</p>
@@ -89,7 +90,7 @@ export function Library({
                       </li>
                     ))}
                   </ul>
-                  {extras.length && source.transcript?.trim() ? (
+                  {extras.length > 0 && source.transcript?.trim() ? (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {extras.map((t) => (
                         <button
