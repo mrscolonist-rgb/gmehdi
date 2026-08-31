@@ -9,7 +9,7 @@ interface Props {
 
 export function TemplatePicker({ value, disabled, onChange }: Props) {
   return (
-    <div className="grid gap-2 sm:grid-cols-3">
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {TEMPLATES.map((t) => {
         const on = t.id === value;
         return (

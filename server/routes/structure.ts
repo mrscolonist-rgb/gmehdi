@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import { MODELS } from '../config.ts';
 import { generateJson, hasApiKey } from '../gemini.ts';
-import { detailGuidance, loadAssistance, loadStylePrompt, styleIds } from '../prompts.ts';
+import {
+  detailGuidance,
+  isReferralStyle,
+  loadAssistance,
+  loadStylePrompt,
+  styleIds,
+} from '../prompts.ts';
 import { NOTE_SCHEMA } from '../schema.ts';
 
 type SectionIn = { id: string; title: string; type?: string; guidance?: string };
@@ -16,6 +22,13 @@ type EhrIn = {
   recentInvestigations?: string[];
   currentDiagnosisOrReason?: string;
   rawVisualSummary?: string;
+};
+type ReferralIn = {
+  specialty?: string;
+  referralReason?: string;
+  continuingCondition?: string;
+  outputType?: string;
+  brevityLevel?: string;
 };
 
 const router = Router();
@@ -36,9 +49,30 @@ function sectionsBlock(sections?: SectionIn[]): string {
   if (!sections?.length) return '';
   const lines = sections.map(
     (s, i) =>
-      `${i + 1}. id="${s.id}" title="${s.title}" type=${s.type || 'bullets'}\n   ${s.guidance || ''}`,
+      `${i + 1}. id="${s.id}" title="${s.title}" type=${s.type || 'text'}\n   ${s.guidance || ''}`,
   );
   return `REQUIRED SECTIONS (omit a section entirely if it has no stated content, unless the style prompt marks it ALWAYS):\n${lines.join('\n')}`;
+}
+
+function referralBlock(styleId: string, referral?: ReferralIn | null): string {
+  if (!isReferralStyle(styleId) || !referral) return '';
+  const outputType = referral.outputType === 'body_only' ? 'body_only' : 'full_letter';
+  const brevity = referral.brevityLevel === 'brief' ? 'brief' : 'standard';
+  if (styleId === 'referral_continuing') {
+    return `REFERRAL INPUT PARAMETERS:
+- specialty: ${referral.specialty || ''}
+- continuing_condition: ${referral.continuingCondition || ''}
+- output_type: ${outputType}
+- brevity_level: ${brevity}
+- consultation_note: the transcript (and EHR / patient context blocks) below
+- context: the clinician-pasted patient context block below (if any)`;
+  }
+  return `REFERRAL INPUT PARAMETERS:
+- specialty: ${referral.specialty || ''}
+- referral_reason: ${referral.referralReason || ''}
+- output_type: ${outputType}
+- consultation_note: the transcript (and EHR / patient context blocks) below
+- context: the clinician-pasted patient context block below (if any)`;
 }
 
 router.post('/api/structure', async (req, res) => {
@@ -54,6 +88,7 @@ router.post('/api/structure', async (req, res) => {
       sections = [],
       ehrContext = null,
       patientContext = '',
+      referral = null,
     } = req.body as {
       transcript?: string;
       styleId?: string;
@@ -62,6 +97,7 @@ router.post('/api/structure', async (req, res) => {
       sections?: SectionIn[];
       ehrContext?: EhrIn | null;
       patientContext?: string;
+      referral?: ReferralIn | null;
     };
 
     if (!transcript.trim()) {
@@ -70,22 +106,36 @@ router.post('/api/structure', async (req, res) => {
     if (!styleIds().includes(styleId)) {
       return res.status(400).json({ error: `Unknown styleId. Use: ${styleIds().join(', ')}` });
     }
+    if (isReferralStyle(styleId)) {
+      if (!referral?.specialty?.trim()) {
+        return res.status(400).json({ error: 'Referral specialty is required' });
+      }
+      if (styleId === 'referral_new' && !referral.referralReason?.trim()) {
+        return res.status(400).json({ error: 'Referral reason is required' });
+      }
+      if (styleId === 'referral_continuing' && !referral.continuingCondition?.trim()) {
+        return res.status(400).json({ error: 'Continuing condition is required' });
+      }
+    }
 
     const patientBlock = patientContext.trim()
-      ? `CLINICIAN-PASTED PATIENT CONTEXT:\n${patientContext.trim()}\nFuse into the relevant sections. Do not treat this as spoken dialogue.`
+      ? `CLINICIAN-PASTED PATIENT CONTEXT / <context>:\n${patientContext.trim()}\nWhen this conflicts with the transcript, this context overrides.`
       : '';
 
+    const letter = isReferralStyle(styleId);
     const prompt = [
-      'You are a medical documentation scribe for Australian general practice.',
-      'Output JSON matching the schema. sections[].content is dash-bullet text (-) with Australian spelling.',
+      letter
+        ? 'You are generating an Australian GP medical referral letter. Output JSON matching the schema. sections[].content is letter prose (paragraphs). No dash-bullet clinical note format unless a short list is clinically clearer.'
+        : 'You are a medical documentation scribe for Australian general practice. Output JSON matching the schema. sections[].content is dash-bullet text (-) with Australian spelling.',
       'No markdown cards, tables, emoji, or HTML. No preamble. Advisories never appear inside sections.',
       loadStylePrompt(styleId),
       loadAssistance(assistanceDegree),
-      detailGuidance(detailLevel),
+      letter ? '' : detailGuidance(detailLevel),
+      referralBlock(styleId, referral),
       sectionsBlock(sections),
       ehrBlock(ehrContext),
       patientBlock,
-      `CONSULTATION TRANSCRIPT:\n---\n${transcript}\n---`,
+      `CONSULTATION TRANSCRIPT / consultation_note:\n---\n${transcript}\n---`,
     ]
       .filter(Boolean)
       .join('\n\n');

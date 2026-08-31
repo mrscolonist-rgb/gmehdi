@@ -7,21 +7,23 @@ This is a slim GP medical scribe for Google AI Studio Build (free tier). Cursor 
 | Change | File |
 | --- | --- |
 | Clinical note wording / evidence rules | `prompts/hp-brief.md`, `prompts/gpccmp.md`, `prompts/adhd.md` |
+| Referral letter rules | `prompts/referral-new.md`, `prompts/referral-continuing.md` |
 | Transcription or BP screenshot instructions | `prompts/transcribe.md`, `prompts/ehr-bp.md` |
 | Pure scribe vs balanced vs senior colleague | `prompts/assistance.md` |
 | Template labels, sections, default assistance/detail | `src/data/templates.ts` |
 | Gemini model IDs | `server/config.ts` only |
 
 Do **not** merge transcribe into structure. Structure receives a transcript string, never audio.
-Do **not** add templates beyond the three IDs: `hp_brief`, `gpccmp`, `adhd_multi_session`.
+Allowed template IDs only: `hp_brief`, `gpccmp`, `adhd_multi_session`, `referral_new`, `referral_continuing`.
 Do **not** add a specialist copilot, mentors, Medication Review, MHCP, or other PMS besides Best Practice.
 Do **not** persist notes on disk. Browser `localStorage` only (`src/storage.ts`).
 
 ## Sessions (do not remove)
 
 - Clinician sets **session name** before recording (`Studio` session name field).
-- One `sessionId` can hold **multiple documents** (H&P + GPCCMP + ADHD) from the same transcript.
+- One `sessionId` can hold **multiple documents** (H&P + GPCCMP + ADHD + referral letters) from the same transcript.
 - Library groups by session name. “Add / Generate {template}” reuses the session transcript.
+- Referral letters need specialty + reason/condition fields (`ReferralFields.tsx`) before generate.
 - Session helpers live in `src/sessions.ts`.
 
 ## File size
@@ -30,7 +32,8 @@ Keep every source file under ~250 lines. Split rather than grow `server.ts` or `
 
 ## Copy / Best Practice
 
-`src/utils/dashBullet.ts` turns the editor sections into plain `-` bullet text for BP progress notes. Copy must stay dash-bullet, Australian spelling, no markdown cards.
+Clinical notes: `src/utils/dashBullet.ts` → plain `-` bullets for BP progress notes.
+Referral letters: same copy helper joins Opening/Body/Closing as paragraph prose (not dash-forced).
 
 ## Audio length
 

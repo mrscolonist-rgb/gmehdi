@@ -1,4 +1,5 @@
 import type { ScribeDocument } from '../types.ts';
+import { isReferralTemplate } from '../data/templates.ts';
 
 function stripMd(text: string): string {
   return text
@@ -7,8 +8,7 @@ function stripMd(text: string): string {
     .replace(/`([^`]+)`/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/^>\s+/gm, '')
-    .replace(/^[\u2022\u00b7]\s+/gm, '- ')
-    .replace(/\*$/gm, '')
+    .replace(/[\u2022\u00b7]/g, '-')
     .trim();
 }
 
@@ -25,13 +25,19 @@ function ensureDashes(text: string): string {
     .join('\n');
 }
 
-/** Best Practice progress-note paste: section titles + dash bullets, no cards. */
+/** Clinical notes: section titles + dash bullets. Referral letters: paragraph prose. */
 export function toDashBulletText(doc: ScribeDocument): string {
+  const letter = isReferralTemplate(doc.templateId);
   const blocks: string[] = [];
   for (const sec of doc.sections || []) {
-    const body = ensureDashes(stripMd(sec.content || ''));
-    if (!body) continue;
-    blocks.push(`${sec.title}\n${body}`);
+    const raw = stripMd(sec.content || '');
+    if (!raw) continue;
+    const body = letter ? raw : ensureDashes(raw);
+    if (letter) {
+      blocks.push(body);
+    } else {
+      blocks.push(`${sec.title}\n${body}`);
+    }
   }
   return blocks.join('\n\n').trim();
 }

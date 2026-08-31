@@ -7,7 +7,7 @@ import { fetchHealth } from './api.ts';
 import { loadNotes, removeNote, removeSession, saveNotes, upsertNote } from './storage.ts';
 import { assembleNote, mergeTranscript, structureFromTranscript, transcribeBlobs } from './pipeline.ts';
 import { renameSession, syncSessionTranscript } from './sessions.ts';
-import { templateById } from './data/templates.ts';
+import { isReferralTemplate, templateById } from './data/templates.ts';
 import type { HealthStatus, ScribeDocument, TemplateId } from './types.ts';
 
 export default function App() {
@@ -16,6 +16,7 @@ export default function App() {
   const [view, setView] = useState<'studio' | 'editor'>('studio');
   const [studioMode, setStudioMode] = useState<StudioMode>('new');
   const [resume, setResume] = useState<ScribeDocument | null>(null);
+  const [deriveTemplateId, setDeriveTemplateId] = useState<TemplateId | null>(null);
   const [library, setLibrary] = useState(false);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -37,7 +38,17 @@ export default function App() {
 
   function newSession() {
     setResume(null);
+    setDeriveTemplateId(null);
     setStudioMode('new');
+    setError('');
+    setView('studio');
+  }
+
+  function openDerive(source: ScribeDocument, templateId: TemplateId) {
+    setResume(source);
+    setDeriveTemplateId(templateId);
+    setStudioMode('derive');
+    setLibrary(false);
     setError('');
     setView('studio');
   }
@@ -45,6 +56,10 @@ export default function App() {
   async function generateSibling(source: ScribeDocument, templateId: TemplateId) {
     setError('');
     setLibrary(false);
+    if (isReferralTemplate(templateId)) {
+      openDerive(source, templateId);
+      return;
+    }
     const t = templateById(templateId);
     try {
       setBusy(`Structuring ${t.label}…`);
@@ -55,6 +70,7 @@ export default function App() {
         detailLevel: t.defaultDetail,
         ehrContext: source.ehrContext,
         patientContext: source.patientContext,
+        referral: null,
       });
       const note = assembleNote({
         sessionId: source.sessionId,
@@ -65,11 +81,13 @@ export default function App() {
         transcript: source.transcript,
         patientContext: source.patientContext,
         ehrContext: source.ehrContext,
+        referral: null,
         audioDurationSec: source.audioDurationSec,
         structured,
       });
       persist(note);
       setResume(null);
+      setDeriveTemplateId(null);
       setStudioMode('new');
       setView('editor');
     } catch (e) {
@@ -103,7 +121,7 @@ export default function App() {
       }
       if (!transcript) throw new Error('No transcript. Record, upload, or paste dialogue.');
 
-      setBusy('Structuring note…');
+      setBusy(isReferralTemplate(draft.templateId) ? 'Generating referral letter…' : 'Structuring note…');
       const structured = await structureFromTranscript({
         transcript,
         templateId: draft.templateId,
@@ -111,6 +129,7 @@ export default function App() {
         detailLevel: draft.detail,
         ehrContext: draft.ehr,
         patientContext: draft.patientContext,
+        referral: draft.referral,
       });
 
       const replaceId = draft.mode === 'resume' ? draft.prior?.id : undefined;
@@ -125,6 +144,7 @@ export default function App() {
         transcript,
         patientContext: draft.patientContext,
         ehrContext: draft.ehr,
+        referral: draft.referral,
         audioDurationSec: duration,
         structured,
       });
@@ -139,6 +159,7 @@ export default function App() {
         persist(note);
       }
       setResume(null);
+      setDeriveTemplateId(null);
       setStudioMode('new');
       setView('editor');
     } catch (e) {
@@ -167,6 +188,7 @@ export default function App() {
         <Studio
           mode={studioMode}
           prior={resume}
+          preferredTemplateId={deriveTemplateId}
           busy={busy}
           error={error}
           onSubmit={(d) => void run(d)}

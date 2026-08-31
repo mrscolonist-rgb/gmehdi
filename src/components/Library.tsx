@@ -35,7 +35,7 @@ export function Library({
           </button>
         </div>
         <p className="mb-3 text-xs text-stone-500">
-          Sessions are named by you. One session can hold several documents (H&amp;P, GPCCMP, ADHD).
+          Sessions are named by you. One session can hold several documents (notes and referral letters).
         </p>
         {groups.length === 0 ? (
           <p className="text-sm text-stone-500">No sessions yet. Notes stay in this browser only.</p>

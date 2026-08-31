@@ -1,7 +1,22 @@
-export type TemplateId = 'hp_brief' | 'gpccmp' | 'adhd_multi_session';
+export type TemplateId =
+  | 'hp_brief'
+  | 'gpccmp'
+  | 'adhd_multi_session'
+  | 'referral_new'
+  | 'referral_continuing';
 export type AssistanceDegree = 'pure_scribe' | 'balanced' | 'senior_colleague';
 export type DetailLevel = 'concise' | 'standard' | 'comprehensive';
 export type SectionType = 'text' | 'bullets' | 'checklist';
+export type ReferralOutputType = 'full_letter' | 'body_only';
+export type ReferralBrevity = 'standard' | 'brief';
+
+export interface ReferralOptions {
+  specialty: string;
+  referralReason: string;
+  continuingCondition: string;
+  outputType: ReferralOutputType;
+  brevityLevel: ReferralBrevity;
+}
 
 export interface TemplateSection {
   id: string;
@@ -65,6 +80,7 @@ export interface ScribeDocument {
   transcript: string;
   patientContext: string;
   ehrContext: EhrContext | null;
+  referral?: ReferralOptions | null;
   createdAt: string;
   updatedAt: string;
   audioDurationSec: number;

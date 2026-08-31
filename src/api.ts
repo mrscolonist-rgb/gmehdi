@@ -1,4 +1,12 @@
-import type { HealthStatus, ScribeDocument, TemplateId, AssistanceDegree, DetailLevel, EhrContext } from './types.ts';
+import type {
+  HealthStatus,
+  ScribeDocument,
+  TemplateId,
+  AssistanceDegree,
+  DetailLevel,
+  EhrContext,
+  ReferralOptions,
+} from './types.ts';
 import { templateById } from './data/templates.ts';
 
 async function parseJson<T>(res: Response): Promise<T> {
@@ -31,6 +39,7 @@ export async function structureNote(input: {
   detailLevel: DetailLevel;
   ehrContext: EhrContext | null;
   patientContext: string;
+  referral?: ReferralOptions | null;
 }): Promise<Pick<ScribeDocument, 'title' | 'subtitle' | 'summary' | 'sections' | 'advisories'>> {
   const tmpl = templateById(input.styleId);
   const res = await fetch('/api/structure', {
@@ -43,6 +52,7 @@ export async function structureNote(input: {
       detailLevel: input.detailLevel,
       ehrContext: input.ehrContext,
       patientContext: input.patientContext,
+      referral: input.referral || null,
       sections: tmpl.sections,
     }),
   });

@@ -4,6 +4,7 @@ import type {
   AssistanceDegree,
   DetailLevel,
   EhrContext,
+  ReferralOptions,
   ScribeDocument,
   TemplateId,
 } from './types.ts';
@@ -42,6 +43,7 @@ export function assembleNote(opts: {
   transcript: string;
   patientContext: string;
   ehrContext: EhrContext | null;
+  referral?: ReferralOptions | null;
   audioDurationSec: number;
   structured: Pick<ScribeDocument, 'title' | 'subtitle' | 'summary' | 'sections' | 'advisories'>;
 }): ScribeDocument {
@@ -63,6 +65,7 @@ export function assembleNote(opts: {
     transcript: opts.transcript,
     patientContext: opts.patientContext,
     ehrContext: opts.ehrContext,
+    referral: opts.referral || null,
     createdAt: opts.createdAt || now,
     updatedAt: now,
     audioDurationSec: opts.audioDurationSec,
@@ -76,6 +79,7 @@ export async function structureFromTranscript(opts: {
   detailLevel: DetailLevel;
   ehrContext: EhrContext | null;
   patientContext: string;
+  referral?: ReferralOptions | null;
 }): Promise<Pick<ScribeDocument, 'title' | 'subtitle' | 'summary' | 'sections' | 'advisories'>> {
   return structureNote({
     transcript: opts.transcript,
@@ -84,5 +88,6 @@ export async function structureFromTranscript(opts: {
     detailLevel: opts.detailLevel,
     ehrContext: opts.ehrContext,
     patientContext: opts.patientContext,
+    referral: opts.referral,
   });
 }

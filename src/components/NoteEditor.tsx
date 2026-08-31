@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Check, Copy, FilePlus2, Mic } from 'lucide-react';
 import type { ScribeDocument, TemplateId } from '../types.ts';
-import { TEMPLATES, templateById } from '../data/templates.ts';
+import { TEMPLATES, isReferralTemplate, templateById } from '../data/templates.ts';
 import { copyDashBullet } from '../utils/dashBullet.ts';
 
 interface Props {
@@ -71,7 +71,11 @@ export function NoteEditor({
             className="inline-flex items-center gap-1 rounded-lg bg-emerald-700 px-3 py-1.5 text-sm text-white"
           >
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            {copied ? 'Copied for BP' : 'Copy for Best Practice'}
+            {copied
+              ? 'Copied'
+              : isReferralTemplate(doc.templateId)
+                ? 'Copy letter'
+                : 'Copy for Best Practice'}
           </button>
         </div>
       </div>

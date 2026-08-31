@@ -1,11 +1,19 @@
 import { useEffect, useState } from 'react';
-import type { AssistanceDegree, DetailLevel, EhrContext, ScribeDocument, TemplateId } from '../types.ts';
-import { templateById } from '../data/templates.ts';
+import type {
+  AssistanceDegree,
+  DetailLevel,
+  EhrContext,
+  ReferralOptions,
+  ScribeDocument,
+  TemplateId,
+} from '../types.ts';
+import { isReferralTemplate, templateById } from '../data/templates.ts';
 import { suggestSessionName } from '../sessions.ts';
 import { TemplatePicker } from './TemplatePicker.tsx';
 import { PatientContext } from './PatientContext.tsx';
 import { BpScreenCapture } from './BpScreenCapture.tsx';
 import { Recorder } from './Recorder.tsx';
+import { EMPTY_REFERRAL, ReferralFields, referralReady } from './ReferralFields.tsx';
 
 export type StudioMode = 'new' | 'resume' | 'derive';
 
@@ -17,39 +25,51 @@ interface Draft {
   ehr: EhrContext | null;
   paste: string;
   sessionName: string;
+  referral: ReferralOptions | null;
   audio: { blobs: Blob[]; mimeType: string; durationSec: number } | null;
 }
 
 export interface StudioSubmit extends Draft {
   prior?: ScribeDocument | null;
   mode: StudioMode;
-  /** When derive: create a new note id but keep sessionId/name/transcript. */
   replaceNoteId?: string | null;
 }
 
 interface Props {
   mode?: StudioMode;
   prior?: ScribeDocument | null;
+  /** When opening derive for a specific template (e.g. referral letter). */
+  preferredTemplateId?: TemplateId | null;
   busy: string;
   error: string;
   onSubmit: (draft: StudioSubmit) => void;
 }
 
-export function Studio({ mode = 'new', prior, busy, error, onSubmit }: Props) {
+export function Studio({
+  mode = 'new',
+  prior,
+  preferredTemplateId = null,
+  busy,
+  error,
+  onSubmit,
+}: Props) {
   const seed = prior ? templateById(prior.templateId) : templateById('hp_brief');
+  const initialId =
+    preferredTemplateId || (mode === 'derive' ? 'gpccmp' : seed.id);
   const [sessionName, setSessionName] = useState(
     prior?.sessionName || suggestSessionName(prior?.ehrContext?.patientName),
   );
-  const [templateId, setTemplateId] = useState<TemplateId>(
-    mode === 'derive' ? 'gpccmp' : seed.id,
-  );
+  const [templateId, setTemplateId] = useState<TemplateId>(initialId);
   const [assistance, setAssistance] = useState<AssistanceDegree>(
-    prior?.assistanceDegree || seed.defaultAssistance,
+    templateById(initialId).defaultAssistance,
   );
-  const [detail, setDetail] = useState<DetailLevel>(prior?.detailLevel || seed.defaultDetail);
+  const [detail, setDetail] = useState<DetailLevel>(templateById(initialId).defaultDetail);
   const [patientContext, setPatientContext] = useState(prior?.patientContext || '');
   const [ehr, setEhr] = useState<EhrContext | null>(prior?.ehrContext || null);
   const [paste, setPaste] = useState('');
+  const [referral, setReferral] = useState<ReferralOptions>(
+    prior?.referral || EMPTY_REFERRAL,
+  );
 
   useEffect(() => {
     if (!prior && !sessionName.trim() && ehr?.patientName) {
@@ -73,6 +93,7 @@ export function Studio({ mode = 'new', prior, busy, error, onSubmit }: Props) {
       ehr,
       paste,
       sessionName: sessionName.trim(),
+      referral: isReferralTemplate(templateId) ? referral : null,
       audio,
       prior,
       mode,
@@ -81,9 +102,13 @@ export function Studio({ mode = 'new', prior, busy, error, onSubmit }: Props) {
   }
 
   const nameOk = sessionName.trim().length > 0;
-  const canStructurePaste =
-    Boolean(busy) === false && nameOk && (mode === 'derive' ? Boolean(prior?.transcript) : Boolean(paste.trim()));
+  const refOk = !isReferralTemplate(templateId) || referralReady(templateId, referral);
+  const hasSource =
+    mode === 'derive' ? Boolean(prior?.transcript) : Boolean(paste.trim());
+  const canStructurePaste = !busy && nameOk && refOk && hasSource;
+  const canRecord = !busy && nameOk && refOk;
   const templateLocked = mode === 'resume' || Boolean(busy);
+  const letter = isReferralTemplate(templateId);
 
   const heading =
     mode === 'resume'
@@ -94,10 +119,10 @@ export function Studio({ mode = 'new', prior, busy, error, onSubmit }: Props) {
 
   const blurb =
     mode === 'resume'
-      ? 'New audio is transcribed and appended, then this note is re-structured. Other docs in the session keep the updated transcript.'
+      ? 'New audio is transcribed and appended, then this note is re-structured.'
       : mode === 'derive'
-        ? 'Uses the same transcript and session name. Pick a different template (e.g. GPCCMP after H&P).'
-        : 'Name the session first so you can find it in the library. You can add more document types from the same consult later.';
+        ? 'Uses the same transcript and session name. Pick a template (note or referral letter).'
+        : 'Name the session first. You can add more document types (including referral letters) from the same consult later.';
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
@@ -121,51 +146,63 @@ export function Studio({ mode = 'new', prior, busy, error, onSubmit }: Props) {
       </label>
 
       <TemplatePicker value={templateId} disabled={templateLocked} onChange={pickTemplate} />
+      {letter ? (
+        <ReferralFields
+          templateId={templateId}
+          value={referral}
+          disabled={Boolean(busy)}
+          onChange={setReferral}
+        />
+      ) : null}
       {mode !== 'derive' ? <BpScreenCapture ehr={ehr} onChange={setEhr} /> : null}
-      {mode !== 'derive' ? (
+      {mode !== 'derive' || letter ? (
         <PatientContext value={patientContext} onChange={setPatientContext} />
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-sm">
-          <span className="font-medium">Assistance</span>
-          <select
-            className="mt-1 w-full rounded-lg border border-stone-200 p-2"
-            value={assistance}
-            onChange={(e) => setAssistance(e.target.value as AssistanceDegree)}
-          >
-            <option value="pure_scribe">Pure scribe</option>
-            <option value="balanced">Balanced</option>
-            <option value="senior_colleague">Senior colleague</option>
-          </select>
-        </label>
-        <label className="text-sm">
-          <span className="font-medium">Detail</span>
-          <select
-            className="mt-1 w-full rounded-lg border border-stone-200 p-2"
-            value={detail}
-            onChange={(e) => setDetail(e.target.value as DetailLevel)}
-          >
-            <option value="concise">Concise</option>
-            <option value="standard">Standard</option>
-            <option value="comprehensive">Comprehensive</option>
-          </select>
-        </label>
-      </div>
+      {!letter ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">
+            <span className="font-medium">Assistance</span>
+            <select
+              className="mt-1 w-full rounded-lg border border-stone-200 p-2"
+              value={assistance}
+              onChange={(e) => setAssistance(e.target.value as AssistanceDegree)}
+            >
+              <option value="pure_scribe">Pure scribe</option>
+              <option value="balanced">Balanced</option>
+              <option value="senior_colleague">Senior colleague</option>
+            </select>
+          </label>
+          <label className="text-sm">
+            <span className="font-medium">Detail</span>
+            <select
+              className="mt-1 w-full rounded-lg border border-stone-200 p-2"
+              value={detail}
+              onChange={(e) => setDetail(e.target.value as DetailLevel)}
+            >
+              <option value="concise">Concise</option>
+              <option value="standard">Standard</option>
+              <option value="comprehensive">Comprehensive</option>
+            </select>
+          </label>
+        </div>
+      ) : null}
 
       {mode !== 'derive' ? (
         <>
           <Recorder
-            disabled={Boolean(busy) || !nameOk}
-            onAudio={(blobs, mimeType, durationSec) => onSubmit(draft({ blobs, mimeType, durationSec }))}
+            disabled={!canRecord}
+            onAudio={(blobs, mimeType, durationSec) =>
+              onSubmit(draft({ blobs, mimeType, durationSec }))
+            }
           />
           <label className="block text-sm">
-            <span className="font-medium">Or paste a transcript</span>
+            <span className="font-medium">Or paste a transcript / consultation note</span>
             <textarea
               rows={6}
               value={paste}
               onChange={(e) => setPaste(e.target.value)}
               className="mt-1 w-full rounded-lg border border-stone-200 p-2 font-mono text-xs"
-              placeholder="Paste consult dialogue…"
+              placeholder="Paste consult dialogue or note text…"
             />
           </label>
         </>
@@ -181,9 +218,22 @@ export function Studio({ mode = 'new', prior, busy, error, onSubmit }: Props) {
         onClick={() => onSubmit(draft(null))}
         className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
       >
-        {mode === 'derive' ? 'Generate this document' : 'Structure pasted transcript'}
+        {mode === 'derive'
+          ? letter
+            ? 'Generate referral letter'
+            : 'Generate this document'
+          : letter
+            ? 'Generate letter from pasted text'
+            : 'Structure pasted transcript'}
       </button>
-      {!nameOk ? <p className="text-sm text-amber-800">Enter a session name before recording or structuring.</p> : null}
+      {!nameOk ? (
+        <p className="text-sm text-amber-800">Enter a session name before recording or structuring.</p>
+      ) : null}
+      {nameOk && !refOk ? (
+        <p className="text-sm text-amber-800">
+          Fill specialty and {templateId === 'referral_continuing' ? 'continuing condition' : 'referral reason'}.
+        </p>
+      ) : null}
       {busy ? <p className="text-sm text-emerald-800">{busy}</p> : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
     </div>

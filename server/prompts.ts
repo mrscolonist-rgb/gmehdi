@@ -8,7 +8,13 @@ const STYLE_FILES: Record<string, string> = {
   hp_brief: 'hp-brief.md',
   gpccmp: 'gpccmp.md',
   adhd_multi_session: 'adhd.md',
+  referral_new: 'referral-new.md',
+  referral_continuing: 'referral-continuing.md',
 };
+
+export function isReferralStyle(styleId: string): boolean {
+  return styleId === 'referral_new' || styleId === 'referral_continuing';
+}
 
 export function loadPrompt(fileName: string): string {
   const hit = cache.get(fileName);

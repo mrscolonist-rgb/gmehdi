@@ -1,4 +1,8 @@
-import type { NoteTemplate } from '../types.ts';
+import type { NoteTemplate, TemplateId } from '../types.ts';
+
+export function isReferralTemplate(id: TemplateId | string): boolean {
+  return id === 'referral_new' || id === 'referral_continuing';
+}
 
 export const TEMPLATES: NoteTemplate[] = [
   {
@@ -140,6 +144,64 @@ export const TEMPLATES: NoteTemplate[] = [
         title: 'Diagnostic Impression & Management Plan',
         type: 'checklist',
         guidance: 'Exact doctor wording. Plan, safety/Austroads, next session agenda if stated.',
+      },
+    ],
+  },
+  {
+    id: 'referral_new',
+    label: 'Referral (new)',
+    shortLabel: 'New specialist letter',
+    description: 'New referral letter. No clinical assumptions. Specialty and reason required.',
+    defaultAssistance: 'pure_scribe',
+    defaultDetail: 'standard',
+    sections: [
+      {
+        id: 'sec_ref_opening',
+        title: 'Opening',
+        type: 'text',
+        guidance: 'Omit entirely if output_type is body_only. State referral reason and urgency if specified.',
+      },
+      {
+        id: 'sec_ref_body',
+        title: 'Body',
+        type: 'text',
+        guidance:
+          'Paragraph prose: history, exam, investigations, current management relevant to referral_reason and specialty only.',
+      },
+      {
+        id: 'sec_ref_closing',
+        title: 'Closing',
+        type: 'text',
+        guidance: 'Omit entirely if output_type is body_only. Thank specialist and state the specific request.',
+      },
+    ],
+  },
+  {
+    id: 'referral_continuing',
+    label: 'Referral (continuing)',
+    shortLabel: 'Ongoing specialist care',
+    description: 'Continuing-care letter for an established specialist relationship.',
+    defaultAssistance: 'pure_scribe',
+    defaultDetail: 'standard',
+    sections: [
+      {
+        id: 'sec_refc_opening',
+        title: 'Opening',
+        type: 'text',
+        guidance: 'Omit if body_only. Reference ongoing care and name continuing_condition.',
+      },
+      {
+        id: 'sec_refc_body',
+        title: 'Body',
+        type: 'text',
+        guidance:
+          'Paragraph updates relevant to specialty/continuing_condition. Respect brevity_level (standard vs brief).',
+      },
+      {
+        id: 'sec_refc_closing',
+        title: 'Closing',
+        type: 'text',
+        guidance: 'Omit if body_only. Thank for ongoing care; request continued management.',
       },
     ],
   },
