@@ -100,9 +100,9 @@ export const TEMPLATES: NoteTemplate[] = [
     id: 'adhd_multi_session',
     label: 'Adult ADHD',
     shortLabel: 'Multi-session assessment',
-    description: 'Scribe-only Adult ADHD note for 30–60 min sessions. Tools section always present.',
-    defaultAssistance: 'pure_scribe',
-    defaultDetail: 'standard',
+    description: 'Adult ADHD note for 30–60 min sessions. Tools section always present.',
+    defaultAssistance: 'balanced',
+    defaultDetail: 'comprehensive',
     sections: [
       {
         id: 'sec_adhd_context',
