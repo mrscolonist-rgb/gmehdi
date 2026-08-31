@@ -2,7 +2,11 @@ import { Fragment, useState } from 'react';
 import { Check, Copy, FilePlus2, Mic } from 'lucide-react';
 import type { AdhdToolsState, ScribeDocument, TemplateId } from '../types.ts';
 import { TEMPLATES, isReferralTemplate, templateById } from '../data/templates.ts';
-import { mergeAdhdToolsIntoContent } from '../utils/adhdToolsNote.ts';
+import {
+  mergeAdhdFormulationIntoDiagnosis,
+  mergeAdhdFormulationIntoTools,
+  mergeAdhdToolsIntoContent,
+} from '../utils/adhdToolsNote.ts';
 import { copyDashBullet } from '../utils/dashBullet.ts';
 import { AdhdTools } from './AdhdTools.tsx';
 
@@ -44,11 +48,16 @@ export function NoteEditor({
   }
 
   function patchTools(tools: AdhdToolsState) {
-    const sections = doc.sections.map((s) =>
-      s.id === 'sec_adhd_tools'
-        ? { ...s, content: mergeAdhdToolsIntoContent(s.content, tools) }
-        : s,
-    );
+    const sections = doc.sections.map((s) => {
+      if (s.id === 'sec_adhd_tools') {
+        const withScores = mergeAdhdToolsIntoContent(s.content, tools);
+        return { ...s, content: mergeAdhdFormulationIntoTools(withScores, tools) };
+      }
+      if (s.id === 'sec_adhd_diagnosis_plan') {
+        return { ...s, content: mergeAdhdFormulationIntoDiagnosis(s.content, tools) };
+      }
+      return s;
+    });
     onChange({
       ...doc,
       tools,
