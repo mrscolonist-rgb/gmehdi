@@ -73,6 +73,7 @@ export function Studio({
   const [paste, setPaste] = useState('');
   const [addedDurationSec, setAddedDurationSec] = useState(0);
   const [localBusy, setLocalBusy] = useState('');
+  const [sttError, setSttError] = useState('');
   const [tools, setTools] = useState<AdhdToolsState | null>(prior?.tools || null);
   const [referral, setReferral] = useState<ReferralOptions>(
     prior?.referral || EMPTY_REFERRAL,
@@ -116,6 +117,7 @@ export function Studio({
 
   async function handleAudio(blobs: Blob[], mimeType: string, durationSec: number) {
     setLocalBusy('Transcribing audio…');
+    setSttError('');
     try {
       const text = await onTranscribe(blobs, mimeType);
       if (!text.trim()) throw new Error('Transcription returned empty text.');
@@ -124,6 +126,8 @@ export function Studio({
     } catch (e) {
       // Keep any prior transcript; recording itself never depended on the API.
       setAddedDurationSec(0);
+      const msg = e instanceof Error ? e.message : 'Transcription failed';
+      setSttError(msg);
       throw e;
     } finally {
       setLocalBusy('');
@@ -180,17 +184,22 @@ export function Studio({
             <Recorder
               disabled={!canRecord}
               onAudio={(blobs, mimeType, durationSec) => {
-                void handleAudio(blobs, mimeType, durationSec).catch((e) => {
-                  alert(e instanceof Error ? e.message : 'Transcription failed');
+                void handleAudio(blobs, mimeType, durationSec).catch(() => {
+                  /* sttError set in handleAudio */
                 });
               }}
             />
             <BpScreenCapture ehr={ehr} onChange={setEhr} />
           </div>
+          {sttError ? (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {sttError}
+            </p>
+          ) : null}
           <label className="block text-sm">
             <span className="font-medium">Transcript</span>
             <span className="ml-1 text-stone-500">
-              (after Stop &amp; transcribe, or paste)
+              (after Stop &amp; transcribe — not live while recording)
             </span>
             <textarea
               rows={4}

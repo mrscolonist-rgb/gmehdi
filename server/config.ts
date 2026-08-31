@@ -17,11 +17,12 @@
  * https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-3-5-transcribe/
  */
 export const MODELS = {
+  /** Pre-recorded STT (not Live). */
   transcribe: 'gemini-3.5-transcribe',
   /** Free-tier / outage backup — multimodal Flash + prompt. */
-  transcribeFallback: 'gemini-3.5-flash',
-  structure: 'gemini-3.5-flash',
-  vision: 'gemini-3.5-flash',
+  transcribeFallback: 'gemini-3.6-flash',
+  structure: 'gemini-3.6-flash',
+  vision: 'gemini-3.6-flash',
 } as const;
 
 /** Inline audio+JSON must stay under the Gemini ~20 MB request cap (base64 expands ~4/3). */

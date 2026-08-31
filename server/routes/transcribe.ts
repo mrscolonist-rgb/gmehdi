@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { MODELS, MAX_CHUNK_BYTES } from '../config.ts';
-import { generateText, generateTranscript, hasApiKey, inlinePart } from '../gemini.ts';
+import { formatGeminiError, generateText, generateTranscript, hasApiKey, inlinePart } from '../gemini.ts';
 import { loadPrompt } from '../prompts.ts';
 
 const router = Router();
@@ -69,9 +69,10 @@ router.post('/api/transcribe', async (req, res) => {
     const result = await transcribeWithFallback(payload, mimeType);
     res.json({ success: true, ...result });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Transcription failed';
+    const message = formatGeminiError(error);
     console.error('Transcription error:', error);
-    res.status(500).json({ error: message });
+    const status = /not set|401|rejected the API key/i.test(message) ? 401 : 500;
+    res.status(status).json({ error: message });
   }
 });
 

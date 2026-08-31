@@ -9,7 +9,7 @@ This repository is meant to be imported or opened in AI Studio. Cursor wrote the
 Prerequisites: Node.js 20+.
 
 1. `npm install`
-2. Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY`
+2. Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY` (AI Studio: Secrets panel, name exactly `GEMINI_API_KEY` — do not leave an empty `GEMINI_API_KEY=` in the repo file)
 3. `npm run dev`
 4. Open http://localhost:3000
 

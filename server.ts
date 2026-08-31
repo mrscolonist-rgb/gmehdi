@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
+import { clearEmptyEnvKeys, hasApiKey } from './server/apiKey.ts';
 import { JSON_BODY_LIMIT, PORT } from './server/config.ts';
 import health from './server/routes/health.ts';
 import transcribe from './server/routes/transcribe.ts';
@@ -11,6 +12,8 @@ import extractReferralReasons from './server/routes/extract-referral-reasons.ts'
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
+// Empty GEMINI_API_KEY="" from .env.example must not block AI Studio Secrets.
+clearEmptyEnvKeys();
 
 const app = express();
 app.use(express.json({ limit: JSON_BODY_LIMIT }));
@@ -39,6 +42,11 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`MyScribe running at http://0.0.0.0:${PORT}`);
+    console.log(
+      hasApiKey()
+        ? 'GEMINI_API_KEY detected'
+        : 'GEMINI_API_KEY missing — set AI Studio Secret or .env.local, then restart',
+    );
   });
 }
 

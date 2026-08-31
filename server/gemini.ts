@@ -3,22 +3,29 @@ import {
   GoogleGenAI,
   type GenerateContentConfig,
 } from '@google/genai';
+import { formatGeminiError, hasApiKey, resolveApiKey } from './apiKey.ts';
 import { CLINICAL_VOCAB } from './clinicalVocab.ts';
 
-let ai: GoogleGenAI | null = null;
+export { hasApiKey, formatGeminiError } from './apiKey.ts';
 
-export function hasApiKey(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY);
-}
+let ai: GoogleGenAI | null = null;
+let aiKeyUsed = '';
 
 export function getAI(): GoogleGenAI {
-  if (!ai) {
+  const key = resolveApiKey();
+  if (!key) {
+    throw new Error(
+      'GEMINI_API_KEY is not set. In AI Studio: Secrets → GEMINI_API_KEY. Locally: .env.local then restart.',
+    );
+  }
+  if (!ai || aiKeyUsed !== key) {
     ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY || '',
+      apiKey: key,
       httpOptions: {
         headers: { 'User-Agent': 'aistudio-build' },
       },
     });
+    aiKeyUsed = key;
   }
   return ai;
 }
@@ -54,19 +61,20 @@ export async function generateText(opts: {
   parts: object[];
   config?: GenerateContentConfig;
 }): Promise<string> {
-  const response = await getAI().models.generateContent({
-    model: opts.model,
-    contents: [{ role: 'user', parts: opts.parts as never }],
-    config: opts.config,
-  });
-  return textFromResponse(response);
+  try {
+    const response = await getAI().models.generateContent({
+      model: opts.model,
+      contents: [{ role: 'user', parts: opts.parts as never }],
+      config: opts.config,
+    });
+    return textFromResponse(response);
+  } catch (error) {
+    throw new Error(formatGeminiError(error));
+  }
 }
 
 /**
- * Gemini 3.5 Transcribe — AI Studio / GenAI SDK documented path:
- * interactions.create + generation_config.transcription_config
- * (verbatim, no diarization_mode, language hint, custom vocabulary).
- * @see https://dev.to/googleai/stop-wrestling-with-asr-the-complete-guide-to-gemini-35-transcribe-1m6i
+ * Gemini 3.5 Transcribe — Interactions + transcription_config (verbatim, non-diarised).
  */
 async function transcribeViaInteractions(opts: {
   model: string;
@@ -87,7 +95,6 @@ async function transcribeViaInteractions(opts: {
       transcription_config: {
         language_codes: ['en-AU'],
         custom_vocabulary: CLINICAL_VOCAB,
-        // Verbatim, non-diarised: omit diarization_mode and timestamp_granularities.
         mode: { type: 'verbatim' },
       },
     },
@@ -95,11 +102,6 @@ async function transcribeViaInteractions(opts: {
   return (interaction.output_text || '').trim();
 }
 
-/**
- * Cloud Agent Platform shape: generateContent + audioTranscriptionConfig.
- * Kept as secondary if Interactions is unavailable in a given runtime.
- * @see https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/3-5-transcribe
- */
 async function transcribeViaGenerateContent(opts: {
   model: string;
   audioBase64: string;
@@ -115,7 +117,6 @@ async function transcribeViaGenerateContent(opts: {
     ],
     config: {
       audioTranscriptionConfig: {
-        // Docs: omit diarization / word timestamps unless needed (we want neither).
         mode: AudioTranscriptionConfigMode.VERBATIM,
         languageCodes: ['en-AU'],
         customVocabulary: CLINICAL_VOCAB,
@@ -125,12 +126,15 @@ async function transcribeViaGenerateContent(opts: {
   return textFromResponse(response);
 }
 
-/** Dedicated STT: Interactions (docs) → generateContent AudioTranscriptionConfig. */
+/** Dedicated STT: Interactions → generateContent AudioTranscriptionConfig. */
 export async function generateTranscript(opts: {
   model: string;
   audioBase64: string;
   mimeType: string;
 }): Promise<string> {
+  if (!hasApiKey()) {
+    throw new Error(formatGeminiError(new Error('missing key')));
+  }
   try {
     const text = await transcribeViaInteractions(opts);
     if (text) return text;
@@ -138,7 +142,11 @@ export async function generateTranscript(opts: {
   } catch (err) {
     console.warn('Interactions STT failed; trying generateContent path:', err);
   }
-  return transcribeViaGenerateContent(opts);
+  try {
+    return await transcribeViaGenerateContent(opts);
+  } catch (error) {
+    throw new Error(formatGeminiError(error));
+  }
 }
 
 export async function generateJson<T>(opts: {

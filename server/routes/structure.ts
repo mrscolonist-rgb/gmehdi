@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { MODELS } from '../config.ts';
-import { generateJson, hasApiKey } from '../gemini.ts';
+import { formatGeminiError, generateJson, hasApiKey } from '../gemini.ts';
 import {
   detailGuidance,
   isReferralStyle,
@@ -153,9 +153,10 @@ router.post('/api/structure', async (req, res) => {
 
     res.json({ success: true, data });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Structuring failed';
+    const message = formatGeminiError(error);
     console.error('Structuring error:', error);
-    res.status(500).json({ error: message });
+    const status = /not set|401|rejected the API key/i.test(message) ? 401 : 500;
+    res.status(status).json({ error: message });
   }
 });
 

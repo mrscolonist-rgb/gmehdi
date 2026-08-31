@@ -23,11 +23,16 @@ export function Header({ hasNote, noteCount, health, onNew, onLibrary }: Props) 
         </div>
         <div className="flex items-center gap-2">
           <span
-            className={`hidden rounded-full px-2 py-0.5 text-[11px] sm:inline ${
-              keyOk ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'
+            className={`rounded-full px-2 py-0.5 text-[11px] ${
+              keyOk ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 font-medium text-amber-900'
             }`}
+            title={
+              keyOk
+                ? 'Gemini API key loaded'
+                : 'Set AI Studio Secret GEMINI_API_KEY (or .env.local), then restart Preview'
+            }
           >
-            {keyOk ? 'Gemini key set' : 'No GEMINI_API_KEY'}
+            {keyOk ? 'Gemini key set' : 'No GEMINI_API_KEY — STT & BP will fail'}
           </span>
           <button
             type="button"
