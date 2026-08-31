@@ -1,0 +1,6 @@
+{
+  "name": "MyScribe",
+  "description": "Australian GP medical scribe: H&P Brief, GPCCMP, and Adult ADHD notes. Record or paste a consult, optional Best Practice screen snapshot, then copy dash-bullet text into BP progress notes.",
+  "requestFramePermissions": ["microphone", "display-capture"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
