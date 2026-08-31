@@ -83,6 +83,7 @@ export default function App() {
         ehrContext: source.ehrContext,
         referral: null,
         audioDurationSec: source.audioDurationSec,
+        tools: templateId === 'adhd_multi_session' ? source.tools || null : null,
         structured,
       });
       persist(note);
@@ -159,6 +160,7 @@ export default function App() {
         ehrContext: draft.ehr,
         referral: draft.referral,
         audioDurationSec: duration,
+        tools: draft.tools,
         structured,
       });
 

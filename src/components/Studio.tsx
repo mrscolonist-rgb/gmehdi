@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type {
+  AdhdToolsState,
   AssistanceDegree,
   DetailLevel,
   EhrContext,
@@ -13,6 +14,8 @@ import { TemplatePicker } from './TemplatePicker.tsx';
 import { PatientContext } from './PatientContext.tsx';
 import { BpScreenCapture } from './BpScreenCapture.tsx';
 import { Recorder } from './Recorder.tsx';
+import { AdhdToolsPanel } from './AdhdToolsPanel.tsx';
+import { StudioFoot } from './StudioFoot.tsx';
 import { EMPTY_REFERRAL, ReferralFields, referralReady } from './ReferralFields.tsx';
 
 export type StudioMode = 'new' | 'resume' | 'derive';
@@ -28,6 +31,8 @@ export interface StudioSubmit {
   referral: ReferralOptions | null;
   /** Extra seconds from the recording just transcribed (added onto prior on resume). */
   addedDurationSec: number;
+  /** ADHD tools filled during the consult (slide-over); applied when template is Adult ADHD. */
+  tools: AdhdToolsState | null;
   prior?: ScribeDocument | null;
   mode: StudioMode;
 }
@@ -66,6 +71,7 @@ export function Studio({
   const [paste, setPaste] = useState('');
   const [addedDurationSec, setAddedDurationSec] = useState(0);
   const [localBusy, setLocalBusy] = useState('');
+  const [tools, setTools] = useState<AdhdToolsState | null>(prior?.tools || null);
   const [referral, setReferral] = useState<ReferralOptions>(
     prior?.referral || EMPTY_REFERRAL,
   );
@@ -100,6 +106,7 @@ export function Studio({
       sessionName: sessionName.trim(),
       referral: letter ? referral : null,
       addedDurationSec,
+      tools,
       prior,
       mode,
     };
@@ -137,7 +144,12 @@ export function Studio({
         : 'New consult';
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+    <div className="mx-auto max-w-5xl space-y-4 px-4 py-6 pb-24">
+      <AdhdToolsPanel
+        available={mode !== 'derive'}
+        value={tools}
+        onChange={setTools}
+      />
       <h1 className="text-xl font-semibold">{heading}</h1>
 
       <label className="block text-sm">
@@ -241,31 +253,18 @@ export function Studio({
         </div>
       ) : null}
 
-      <button
-        type="button"
-        disabled={!canGenerate}
-        onClick={() => onSubmit(draft())}
-        className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
-      >
-        {letter ? 'Generate referral letter' : 'Generate note'}
-      </button>
-      {!nameOk ? (
-        <p className="text-sm text-amber-800">Enter a session name before recording.</p>
-      ) : null}
-      {nameOk && !hasSource && mode !== 'derive' ? (
-        <p className="text-sm text-stone-500">
-          Pause only pauses the mic. Stop finishes the recording and runs transcription — it does not
-          generate the note yet.
-        </p>
-      ) : null}
-      {nameOk && hasSource && !refOk ? (
-        <p className="text-sm text-amber-800">
-          Fill specialty and{' '}
-          {templateId === 'referral_continuing' ? 'continuing condition' : 'referral reason'}.
-        </p>
-      ) : null}
-      {busyMsg ? <p className="text-sm text-emerald-800">{busyMsg}</p> : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      <StudioFoot
+        letter={letter}
+        canGenerate={canGenerate}
+        nameOk={nameOk}
+        hasSource={hasSource}
+        refOk={refOk}
+        mode={mode}
+        templateId={templateId}
+        busyMsg={busyMsg}
+        error={error}
+        onGenerate={() => onSubmit(draft())}
+      />
     </div>
   );
 }

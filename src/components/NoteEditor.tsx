@@ -1,14 +1,10 @@
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { Check, Copy, FilePlus2, Mic } from 'lucide-react';
 import type { AdhdToolsState, ScribeDocument, TemplateId } from '../types.ts';
 import { TEMPLATES, isReferralTemplate, templateById } from '../data/templates.ts';
-import {
-  mergeAdhdFormulationIntoDiagnosis,
-  mergeAdhdFormulationIntoTools,
-  mergeAdhdToolsIntoContent,
-} from '../utils/adhdToolsNote.ts';
+import { applyAdhdToolsToSections } from '../utils/adhdToolsNote.ts';
 import { copyDashBullet } from '../utils/dashBullet.ts';
-import { AdhdTools } from './AdhdTools.tsx';
+import { AdhdToolsPanel } from './AdhdToolsPanel.tsx';
 
 interface Props {
   doc: ScribeDocument;
@@ -48,26 +44,17 @@ export function NoteEditor({
   }
 
   function patchTools(tools: AdhdToolsState) {
-    const sections = doc.sections.map((s) => {
-      if (s.id === 'sec_adhd_tools') {
-        const withScores = mergeAdhdToolsIntoContent(s.content, tools);
-        return { ...s, content: mergeAdhdFormulationIntoTools(withScores, tools) };
-      }
-      if (s.id === 'sec_adhd_diagnosis_plan') {
-        return { ...s, content: mergeAdhdFormulationIntoDiagnosis(s.content, tools) };
-      }
-      return s;
-    });
     onChange({
       ...doc,
       tools,
-      sections,
+      sections: applyAdhdToolsToSections(doc.sections, tools),
       updatedAt: new Date().toISOString(),
     });
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+    <div className="mx-auto max-w-5xl space-y-4 px-4 py-6 pb-24">
+      {isAdhd ? <AdhdToolsPanel value={doc.tools} onChange={patchTools} /> : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1">
           <label className="block text-xs font-medium text-stone-500">Session name</label>
@@ -130,20 +117,15 @@ export function NoteEditor({
 
       {doc.summary ? <p className="text-sm text-stone-600">{doc.summary}</p> : null}
       {doc.sections.map((sec) => (
-        <Fragment key={sec.id}>
-          {isAdhd && sec.id === 'sec_adhd_tools' ? (
-            <AdhdTools value={doc.tools} onChange={patchTools} />
-          ) : null}
-          <section className="rounded-xl border border-stone-200 bg-white p-3">
-            <h2 className="mb-2 text-sm font-semibold">{sec.title}</h2>
-            <textarea
-              className="w-full resize-y rounded-lg border border-stone-100 p-2 font-mono text-sm"
-              rows={Math.max(4, sec.content.split('\n').length + 1)}
-              value={sec.content}
-              onChange={(e) => patchSection(sec.id, e.target.value)}
-            />
-          </section>
-        </Fragment>
+        <section key={sec.id} className="rounded-xl border border-stone-200 bg-white p-3">
+          <h2 className="mb-2 text-sm font-semibold">{sec.title}</h2>
+          <textarea
+            className="w-full resize-y rounded-lg border border-stone-100 p-2 font-mono text-sm"
+            rows={Math.max(4, sec.content.split('\n').length + 1)}
+            value={sec.content}
+            onChange={(e) => patchSection(sec.id, e.target.value)}
+          />
+        </section>
       ))}
       {doc.advisories?.length ? (
         <aside className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">

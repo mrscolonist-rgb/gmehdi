@@ -1,6 +1,7 @@
 import { blobToBase64, blobsToChunks } from './utils/chunkAudio.ts';
 import { transcribeChunk, structureNote } from './api.ts';
 import type {
+  AdhdToolsState,
   AssistanceDegree,
   DetailLevel,
   EhrContext,
@@ -8,6 +9,7 @@ import type {
   ScribeDocument,
   TemplateId,
 } from './types.ts';
+import { applyAdhdToolsToSections } from './utils/adhdToolsNote.ts';
 
 export async function transcribeBlobs(
   blobs: Blob[],
@@ -45,11 +47,17 @@ export function assembleNote(opts: {
   ehrContext: EhrContext | null;
   referral?: ReferralOptions | null;
   audioDurationSec: number;
+  tools?: AdhdToolsState | null;
   structured: Pick<ScribeDocument, 'title' | 'subtitle' | 'summary' | 'sections' | 'advisories'>;
 }): ScribeDocument {
   const now = new Date().toISOString();
   const sessionId = opts.sessionId || `sess_${Date.now()}`;
   const sessionName = opts.sessionName.trim() || 'Untitled session';
+  const isAdhd = opts.templateId === 'adhd_multi_session';
+  const tools = isAdhd ? opts.tools || null : null;
+  const sections = isAdhd
+    ? applyAdhdToolsToSections(opts.structured.sections || [], tools)
+    : opts.structured.sections || [];
   return {
     id: opts.id || `note_${Date.now()}`,
     sessionId,
@@ -60,12 +68,13 @@ export function assembleNote(opts: {
     templateId: opts.templateId,
     assistanceDegree: opts.assistanceDegree,
     detailLevel: opts.detailLevel,
-    sections: opts.structured.sections || [],
+    sections,
     advisories: opts.structured.advisories || [],
     transcript: opts.transcript,
     patientContext: opts.patientContext,
     ehrContext: opts.ehrContext,
     referral: opts.referral || null,
+    tools,
     createdAt: opts.createdAt || now,
     updatedAt: now,
     audioDurationSec: opts.audioDurationSec,

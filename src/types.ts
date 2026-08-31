@@ -97,7 +97,7 @@ export interface ScribeDocument {
   patientContext: string;
   ehrContext: EhrContext | null;
   referral?: ReferralOptions | null;
-  /** Interactive ADHD tools (ASRS, …) filled in the note editor. */
+  /** Interactive ADHD tools (ASRS, …) filled during consult (slide-over) or in the note editor. */
   tools?: AdhdToolsState | null;
   createdAt: string;
   updatedAt: string;
