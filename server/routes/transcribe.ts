@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { MODELS, MAX_CHUNK_BYTES } from '../config.ts';
-import { generateText, hasApiKey, inlinePart } from '../gemini.ts';
-import { loadPrompt } from '../prompts.ts';
+import { generateTranscript, hasApiKey } from '../gemini.ts';
 
 const router = Router();
 
@@ -27,9 +26,10 @@ router.post('/api/transcribe', async (req, res) => {
       });
     }
 
-    const transcript = await generateText({
+    const transcript = await generateTranscript({
       model: MODELS.transcribe,
-      parts: [inlinePart(payload, mimeType), { text: loadPrompt('transcribe.md') }],
+      audioBase64: payload,
+      mimeType,
     });
 
     res.json({ success: true, transcript });

@@ -1,22 +1,21 @@
 /**
  * Model IDs — edit this file only to change Gemini models in AI Studio.
  *
- * Transcribe uses Gemini 3.5 Flash because it accepts audio on generateContent
- * (text, image, video, audio, PDF). Docs (May 2026, still current Aug 2026):
- * https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash
+ * Transcribe: gemini-3.5-transcribe (recorded / synchronous STT via generateContent
+ * + audioTranscriptionConfig). Not the Live stream model. Not Batch inference
+ * (Google documents Batch as unsupported for this model family).
+ *
+ * Structure + BP vision stay on Flash (multimodal notes / images).
  *
  * Do NOT use gemini-3.7-flash — that ID is invalid.
+ * Live captions would be gemini-3.5-transcribe-live (different API; not used here).
  *
- * Optional dedicated transcribe models (audio-in / text-out only, Aug 2026):
- *   gemini-3.5-transcribe  or  gemini-3.5-transcribe-preview
- * Those cannot structure notes or read BP screenshots. Keep Flash here so
- * transcribe, structure, and BP vision share one free-tier generateContent path.
- *
- * If 3.5-flash is missing in a given Studio runtime, swap all three IDs to the
- * current documented Flash that accepts audio (e.g. gemini-3.6-flash).
+ * Docs:
+ * https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-3-5-transcribe/
+ * https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/3-5-transcribe
  */
 export const MODELS = {
-  transcribe: 'gemini-3.5-flash',
+  transcribe: 'gemini-3.5-transcribe',
   structure: 'gemini-3.5-flash',
   vision: 'gemini-3.5-flash',
 } as const;
