@@ -25,6 +25,7 @@ Do **not** persist notes on disk. Browser `localStorage` only (`src/storage.ts`)
 - Library groups by session name. “Add / Generate {template}” reuses the session transcript.
 - Referral letters: always pure scribe + concise. Specialty + reason chosen from `/api/extract-referral-reasons` suggestions (`ReferralFields.tsx`). Letter scoped to that reason only.
 - Session helpers live in `src/sessions.ts`.
+- Patient context uses on-demand mini-sections (`src/patientContext.ts`). Last-session paste is comparison / follow-up only — prior vitals must not appear as today's findings (`prompts/patient-context.md`).
 
 ## File size
 

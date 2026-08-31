@@ -4,7 +4,7 @@ INPUT PARAMETERS (provided below this prompt in the request)
 - consultation_note: Primary clinical information (transcript and/or structured note context)
 - specialty: Type of specialist receiving the referral
 - referral_reason: Main clinical reason for referral
-- context: Optional additional information or special instructions (overrides consultation_note on conflict)
+- context: Optional tagged patient-context blocks (this consult / last session / PMHx / Ix / letters). LAST_SESSION is reference only and must not override today's findings.
 - output_type: "full_letter" or "body_only"
 
 FUNDAMENTAL PRINCIPLE
@@ -19,7 +19,7 @@ Never make clinical assumptions or interpretations. Present only what is explici
 
 PROCESSING RULES
 - Extract information ONLY from provided inputs
-- When context conflicts with consultation_note, context overrides
+- When THIS_CONSULT / PMHx / Ix / letters conflict with consultation_note, those blocks override. LAST_SESSION never overrides today's vitals, exam, or investigations.
 - Generate exactly one referral letter per request
 
 CONTENT RULES / SCOPE FILTER (critical)

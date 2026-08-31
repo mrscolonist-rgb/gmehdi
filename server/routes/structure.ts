@@ -5,6 +5,7 @@ import {
   detailGuidance,
   isReferralStyle,
   loadAssistance,
+  loadPrompt,
   loadStylePrompt,
   styleIds,
 } from '../prompts.ts';
@@ -123,7 +124,7 @@ router.post('/api/structure', async (req, res) => {
     }
 
     const patientBlock = patientContext.trim()
-      ? `CLINICIAN-PASTED PATIENT CONTEXT / <context>:\n${patientContext.trim()}\nWhen this conflicts with the transcript, this context overrides.`
+      ? `${loadPrompt('patient-context.md')}\n\nCLINICIAN-PASTED PATIENT CONTEXT / <context>:\n${patientContext.trim()}`
       : '';
 
     const letter = isReferralStyle(styleId);
