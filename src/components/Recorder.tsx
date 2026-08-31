@@ -33,10 +33,12 @@ export function Recorder({ disabled, onAudio }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-3">
+    <div className="flex h-full min-h-[148px] flex-col rounded-xl border border-stone-200 bg-white p-3">
       <p className="text-sm font-medium">Consult audio</p>
-      <p className="text-xs text-stone-500">Typical 5–20 min; ADHD up to 60 min. Long recordings are split every 6 minutes.</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <p className="text-xs text-stone-500">
+        Typical 5–20 min; ADHD up to 60 min. Split every 6 minutes.
+      </p>
+      <div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
         {!live ? (
           <button
             type="button"

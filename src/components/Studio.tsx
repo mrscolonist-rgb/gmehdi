@@ -163,14 +163,17 @@ export function Studio({
 
       {mode !== 'derive' ? (
         <div className="space-y-2">
-          <Recorder
-            disabled={!canRecord}
-            onAudio={(blobs, mimeType, durationSec) => {
-              void handleAudio(blobs, mimeType, durationSec).catch((e) => {
-                alert(e instanceof Error ? e.message : 'Transcription failed');
-              });
-            }}
-          />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:items-stretch">
+            <Recorder
+              disabled={!canRecord}
+              onAudio={(blobs, mimeType, durationSec) => {
+                void handleAudio(blobs, mimeType, durationSec).catch((e) => {
+                  alert(e instanceof Error ? e.message : 'Transcription failed');
+                });
+              }}
+            />
+            <BpScreenCapture ehr={ehr} onChange={setEhr} />
+          </div>
           <label className="block text-sm">
             <span className="font-medium">Transcript</span>
             <span className="ml-1 text-stone-500">
@@ -213,7 +216,6 @@ export function Studio({
           onChange={setReferral}
         />
       ) : null}
-      {mode !== 'derive' ? <BpScreenCapture ehr={ehr} onChange={setEhr} /> : null}
       {mode !== 'derive' || letter ? (
         <PatientContext value={patientContext} onChange={setPatientContext} />
       ) : null}

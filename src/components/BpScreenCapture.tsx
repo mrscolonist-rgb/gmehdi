@@ -28,31 +28,39 @@ export function BpScreenCapture({ ehr, onChange }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-3">
+    <div className="flex h-full min-h-[148px] flex-col rounded-xl border border-stone-200 bg-white p-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-medium">Best Practice screen (optional)</p>
-          <p className="text-xs text-stone-500">Share the BP Premier window, then a still is sent to Gemini Vision. Not a live stream.</p>
+          <p className="text-sm font-medium">Best Practice screen</p>
+          <p className="text-xs text-stone-500">
+            Optional. Share BP Premier window — still frame to Gemini Vision.
+          </p>
         </div>
         {ehr ? (
-          <button type="button" onClick={() => onChange(null)} className="text-stone-400 hover:text-stone-700">
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-stone-400 hover:text-stone-700"
+            aria-label="Clear BP capture"
+          >
             <X className="h-4 w-4" />
           </button>
         ) : null}
       </div>
       {ehr ? (
-        <p className="mt-2 text-xs text-emerald-800">{ehrSummaryLine(ehr)}</p>
-      ) : (
+        <p className="mt-2 line-clamp-3 text-xs text-emerald-800">{ehrSummaryLine(ehr)}</p>
+      ) : null}
+      <div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
         <button
           type="button"
-          onClick={capture}
+          onClick={() => void capture()}
           disabled={busy}
-          className="mt-2 inline-flex items-center gap-1 rounded-lg border border-stone-200 px-3 py-1.5 text-sm hover:bg-stone-50 disabled:opacity-60"
+          className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-3 py-1.5 text-sm hover:bg-stone-50 disabled:opacity-60"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-          Capture BP window
+          {ehr ? 'Recapture BP' : 'Capture BP window'}
         </button>
-      )}
+      </div>
       {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
     </div>
   );
