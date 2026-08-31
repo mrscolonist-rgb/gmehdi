@@ -9,10 +9,12 @@ interface Props {
   onChange: (next: AdhdToolsState) => void;
   /** Hide launcher (e.g. derive-only screens). */
   available?: boolean;
+  /** Extra guidance (e.g. while transcription runs). */
+  hint?: string;
 }
 
-/** Floating entry + right slide-over. Recording underneath keeps running. */
-export function AdhdToolsPanel({ value, onChange, available = true }: Props) {
+/** Floating entry + right slide-over. Usable while recording or while STT runs. */
+export function AdhdToolsPanel({ value, onChange, available = true, hint }: Props) {
   const [open, setOpen] = useState(false);
   if (!available) return null;
   const filled = adhdToolsHasContent(value);
@@ -46,7 +48,8 @@ export function AdhdToolsPanel({ value, onChange, available = true }: Props) {
               <div>
                 <p className="text-sm font-semibold text-stone-900">ADHD assessment tools</p>
                 <p className="text-[11px] text-stone-500">
-                  Use while recording — dismiss anytime; the consult flow underneath stays as-is.
+                  {hint ||
+                    'Use while recording or while Stop & transcribe runs. Merges into Adult ADHD on Generate.'}
                 </p>
               </div>
               <button

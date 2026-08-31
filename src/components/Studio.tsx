@@ -14,8 +14,10 @@ import { TemplatePicker } from './TemplatePicker.tsx';
 import { PatientContext } from './PatientContext.tsx';
 import { BpScreenCapture } from './BpScreenCapture.tsx';
 import { Recorder } from './Recorder.tsx';
+import { studioPhase } from '../utils/studioBusy.ts';
 import { AdhdToolsPanel } from './AdhdToolsPanel.tsx';
 import { StudioFoot } from './StudioFoot.tsx';
+import { TranscribeBanner } from './TranscribeBanner.tsx';
 import { EMPTY_REFERRAL, ReferralFields, referralReady } from './ReferralFields.tsx';
 
 export type StudioMode = 'new' | 'resume' | 'derive';
@@ -76,7 +78,7 @@ export function Studio({
     prior?.referral || EMPTY_REFERRAL,
   );
 
-  const busyMsg = busy || localBusy;
+  const { busyMsg, transcribing, structuring } = studioPhase(localBusy, busy);
 
   useEffect(() => {
     if (!prior && !sessionName.trim() && ehr?.patientName) {
@@ -133,8 +135,8 @@ export function Studio({
   const hasSource =
     mode === 'derive' ? Boolean(prior?.transcript) : Boolean(paste.trim());
   const canGenerate = !busyMsg && nameOk && refOk && hasSource;
-  const canRecord = !busyMsg && nameOk && mode !== 'derive';
-  const templateLocked = mode === 'resume' || Boolean(busyMsg);
+  const canRecord = !transcribing && !structuring && nameOk && mode !== 'derive';
+  const templateLocked = mode === 'resume' || structuring;
 
   const heading =
     mode === 'resume'
@@ -149,8 +151,14 @@ export function Studio({
         available={mode !== 'derive'}
         value={tools}
         onChange={setTools}
+        hint={
+          transcribing
+            ? 'Transcribing in background — keep filling tools; they merge into the Adult ADHD note on Generate.'
+            : undefined
+        }
       />
       <h1 className="text-xl font-semibold">{heading}</h1>
+      {transcribing ? <TranscribeBanner message={busyMsg} /> : null}
 
       <label className="block text-sm">
         <span className="font-medium">Session name</span>
@@ -159,7 +167,7 @@ export function Studio({
           type="text"
           value={sessionName}
           onChange={(e) => setSessionName(e.target.value)}
-          disabled={Boolean(busyMsg)}
+          disabled={structuring}
           className="mt-1 w-full rounded-lg border border-stone-200 p-2.5 text-base font-medium"
           placeholder="e.g. Arthur Pendelton — T2DM review"
           autoFocus={mode === 'new'}
@@ -217,7 +225,7 @@ export function Studio({
           value={referral}
           sourceText={sourceForReasons}
           patientContext={patientContext}
-          disabled={Boolean(busyMsg)}
+          disabled={structuring}
           onChange={setReferral}
         />
       ) : null}
@@ -261,7 +269,8 @@ export function Studio({
         refOk={refOk}
         mode={mode}
         templateId={templateId}
-        busyMsg={busyMsg}
+        busyMsg={structuring ? busyMsg : ''}
+        transcribing={transcribing}
         error={error}
         onGenerate={() => onSubmit(draft())}
       />

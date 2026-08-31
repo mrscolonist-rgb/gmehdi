@@ -44,6 +44,7 @@ Long ADHD consults (30–60 min) are split in the browser (`src/utils/audio.ts` 
 ## Record → Generate (do not collapse)
 
 1. **Stop & transcribe** only fills the transcript box (does not structure).
-2. User chooses template / referral reason after the transcript exists.
-3. **Generate note** / **Generate referral letter** runs `/api/structure` once.
+2. While transcription runs (and while recording), clinician may fill **ADHD tools** and **patient context** — do not lock those UI surfaces during STT busy state.
+3. User chooses template / referral reason (Adult ADHD to apply tools).
+4. **Generate note** / **Generate referral letter** runs `/api/structure` once; `patientContext` goes into structure; ADHD `tools` merge in `assembleNote` for Adult ADHD.
 Do not make Stop auto-generate the document again.
