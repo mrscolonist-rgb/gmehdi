@@ -161,8 +161,9 @@ export function Studio({
         />
       </label>
 
+      {/* Record / transcript directly under session name */}
       {mode !== 'derive' ? (
-        <>
+        <div className="space-y-2 rounded-xl border border-stone-200 bg-white p-3">
           <Recorder
             disabled={!canRecord}
             onAudio={(blobs, mimeType, durationSec) => {
@@ -174,29 +175,28 @@ export function Studio({
           <label className="block text-sm">
             <span className="font-medium">Transcript</span>
             <span className="ml-1 text-stone-500">
-              (filled after Stop / upload, or paste manually)
+              (after Stop &amp; transcribe, or paste)
             </span>
             <textarea
-              rows={6}
+              rows={4}
               value={paste}
               onChange={(e) => {
                 setPaste(e.target.value);
                 if (!e.target.value.trim()) setAddedDurationSec(0);
               }}
               className="mt-1 w-full rounded-lg border border-stone-200 p-2 font-mono text-xs"
-              placeholder="After you stop recording, the transcript appears here…"
+              placeholder="Transcript appears here after you stop recording…"
             />
           </label>
           {paste.trim() ? (
-            <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+            <p className="text-xs text-emerald-900">
               {mode === 'resume'
-                ? `New audio segment transcribed (${paste.trim().length} chars). Generate will append it to the existing session transcript.`
-                : `Transcript ready (${paste.trim().length} characters).`}{' '}
-              Choose the template below
-              {letter ? ', pick specialty and referral reason,' : ','} then press <strong>Generate</strong>.
+                ? `New segment ready (${paste.trim().length} chars) — Generate appends it to the session.`
+                : `Transcript ready (${paste.trim().length} chars).`}{' '}
+              Choose template below, then Generate.
             </p>
           ) : null}
-        </>
+        </div>
       ) : (
         <p className="rounded-lg bg-stone-100 px-3 py-2 text-xs text-stone-600">
           Source transcript: {prior?.transcript?.length || 0} characters · session kept as-is
