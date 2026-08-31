@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Check, Copy, FilePlus2, Mic } from 'lucide-react';
-import type { ScribeDocument, TemplateId } from '../types.ts';
+import type { AdhdToolsState, ScribeDocument, TemplateId } from '../types.ts';
 import { TEMPLATES, isReferralTemplate, templateById } from '../data/templates.ts';
+import { mergeAsrsIntoToolsContent } from '../data/asrs.ts';
 import { copyDashBullet } from '../utils/dashBullet.ts';
+import { AdhdTools } from './AdhdTools.tsx';
 
 interface Props {
   doc: ScribeDocument;
@@ -23,6 +25,7 @@ export function NoteEditor({
 }: Props) {
   const [copied, setCopied] = useState(false);
   const extras = TEMPLATES.filter((t) => !siblingTemplateIds.includes(t.id));
+  const isAdhd = doc.templateId === 'adhd_multi_session';
 
   async function copy() {
     const ok = await copyDashBullet(doc);
@@ -36,6 +39,21 @@ export function NoteEditor({
     onChange({
       ...doc,
       sections: doc.sections.map((s) => (s.id === id ? { ...s, content } : s)),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  function patchTools(tools: AdhdToolsState) {
+    const asrs = tools.asrs || {};
+    const sections = doc.sections.map((s) =>
+      s.id === 'sec_adhd_tools'
+        ? { ...s, content: mergeAsrsIntoToolsContent(s.content, asrs) }
+        : s,
+    );
+    onChange({
+      ...doc,
+      tools,
+      sections,
       updatedAt: new Date().toISOString(),
     });
   }
@@ -104,15 +122,20 @@ export function NoteEditor({
 
       {doc.summary ? <p className="text-sm text-stone-600">{doc.summary}</p> : null}
       {doc.sections.map((sec) => (
-        <section key={sec.id} className="rounded-xl border border-stone-200 bg-white p-3">
-          <h2 className="mb-2 text-sm font-semibold">{sec.title}</h2>
-          <textarea
-            className="w-full resize-y rounded-lg border border-stone-100 p-2 font-mono text-sm"
-            rows={Math.max(4, sec.content.split('\n').length + 1)}
-            value={sec.content}
-            onChange={(e) => patchSection(sec.id, e.target.value)}
-          />
-        </section>
+        <Fragment key={sec.id}>
+          {isAdhd && sec.id === 'sec_adhd_tools' ? (
+            <AdhdTools value={doc.tools} onChange={patchTools} />
+          ) : null}
+          <section className="rounded-xl border border-stone-200 bg-white p-3">
+            <h2 className="mb-2 text-sm font-semibold">{sec.title}</h2>
+            <textarea
+              className="w-full resize-y rounded-lg border border-stone-100 p-2 font-mono text-sm"
+              rows={Math.max(4, sec.content.split('\n').length + 1)}
+              value={sec.content}
+              onChange={(e) => patchSection(sec.id, e.target.value)}
+            />
+          </section>
+        </Fragment>
       ))}
       {doc.advisories?.length ? (
         <aside className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">

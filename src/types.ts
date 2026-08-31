@@ -1,3 +1,5 @@
+import type { AsrsAnswers } from './data/asrs.ts';
+
 export type TemplateId =
   | 'hp_brief'
   | 'gpccmp'
@@ -63,6 +65,10 @@ export interface DocumentSection {
   content: string;
 }
 
+export interface AdhdToolsState {
+  asrs?: AsrsAnswers;
+}
+
 export interface ScribeDocument {
   id: string;
   /** Groups multiple notes (e.g. H&P + GPCCMP) from one consult. */
@@ -81,6 +87,8 @@ export interface ScribeDocument {
   patientContext: string;
   ehrContext: EhrContext | null;
   referral?: ReferralOptions | null;
+  /** Interactive ADHD tools (ASRS, …) filled in the note editor. */
+  tools?: AdhdToolsState | null;
   createdAt: string;
   updatedAt: string;
   audioDurationSec: number;
