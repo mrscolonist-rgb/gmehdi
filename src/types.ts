@@ -1,4 +1,5 @@
 import type { AsrsAnswers } from './data/asrs.ts';
+import type { Dsm5CriteriaAState } from './data/dsm5CriteriaA.ts';
 
 export type TemplateId =
   | 'hp_brief'
@@ -67,6 +68,7 @@ export interface DocumentSection {
 
 export interface AdhdToolsState {
   asrs?: AsrsAnswers;
+  dsm5?: Dsm5CriteriaAState;
 }
 
 export interface ScribeDocument {

@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react';
 import { Check, Copy, FilePlus2, Mic } from 'lucide-react';
 import type { AdhdToolsState, ScribeDocument, TemplateId } from '../types.ts';
 import { TEMPLATES, isReferralTemplate, templateById } from '../data/templates.ts';
-import { mergeAsrsIntoToolsContent } from '../data/asrs.ts';
+import { mergeAdhdToolsIntoContent } from '../utils/adhdToolsNote.ts';
 import { copyDashBullet } from '../utils/dashBullet.ts';
 import { AdhdTools } from './AdhdTools.tsx';
 
@@ -44,10 +44,9 @@ export function NoteEditor({
   }
 
   function patchTools(tools: AdhdToolsState) {
-    const asrs = tools.asrs || {};
     const sections = doc.sections.map((s) =>
       s.id === 'sec_adhd_tools'
-        ? { ...s, content: mergeAsrsIntoToolsContent(s.content, asrs) }
+        ? { ...s, content: mergeAdhdToolsIntoContent(s.content, tools) }
         : s,
     );
     onChange({

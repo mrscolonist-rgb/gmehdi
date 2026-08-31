@@ -26,7 +26,7 @@ Do **not** persist notes on disk. Browser `localStorage` only (`src/storage.ts`)
 - Referral letters: always pure scribe + concise. Specialty + reason chosen from `/api/extract-referral-reasons` suggestions (`ReferralFields.tsx`). Letter scoped to that reason only.
 - Session helpers live in `src/sessions.ts`.
 - Patient context uses on-demand mini-sections (`src/patientContext.ts`). Last-session paste is comparison / follow-up only — prior vitals must not appear as today's findings (`prompts/patient-context.md`).
-- ADHD notes: interactive ASRS-v1.1 in the note editor (`src/data/asrs.ts`, `AsrsTool.tsx`). Scores only — no item wording changes, no clinical interpretation.
+- ADHD notes: interactive tools in the note editor — ASRS-v1.1 (`src/data/asrs.ts`) and DSM-5 Criteria A checklist (`src/data/dsm5CriteriaA.ts`). Scores/counts only — no item wording changes, no clinical interpretation beyond form thresholds.
 
 ## File size
 
