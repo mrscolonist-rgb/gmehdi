@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { MODELS } from '../config.ts';
-import { formatGeminiError, generateJson, hasApiKey, isQuotaError } from '../gemini.ts';
+import { STRUCTURE_MODELS } from '../config.ts';
+import { formatGeminiError, hasApiKey, isQuotaError } from '../gemini.ts';
+import { generateJsonWithFallback } from '../modelFallback.ts';
 import {
   detailGuidance,
   isReferralStyle,
@@ -145,13 +146,13 @@ router.post('/api/structure', async (req, res) => {
       .filter(Boolean)
       .join('\n\n');
 
-    const data = await generateJson({
-      model: MODELS.structure,
+    const { data, model } = await generateJsonWithFallback({
+      models: STRUCTURE_MODELS,
       parts: [{ text: prompt }],
       schema: NOTE_SCHEMA,
     });
 
-    res.json({ success: true, data });
+    res.json({ success: true, data, model });
   } catch (error: unknown) {
     const message = formatGeminiError(error);
     console.error('Structuring error:', error);

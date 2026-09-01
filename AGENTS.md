@@ -11,7 +11,7 @@ This is a slim GP medical scribe for Google AI Studio Build (free tier). Cursor 
 | Transcription or BP screenshot instructions | `server/gemini.ts` (3.5 Transcribe Interactions + transcription_config), `server/routes/transcribe.ts` (Flash fallback), `prompts/transcribe.md`, `prompts/ehr-bp.md` |
 | Pure scribe vs balanced vs senior colleague | `prompts/assistance.md` |
 | Template labels, sections, default assistance/detail | `src/data/templates.ts` |
-| Gemini model IDs | `server/config.ts` only (`gemini-3.5-transcribe` + Flash for structure/vision) |
+| Gemini model IDs | `server/config.ts` only — STT `gemini-3.5-transcribe`; structure/vision try `STRUCTURE_MODELS` / `VISION_MODELS` on 429 (`server/modelFallback.ts`) |
 | API key loading | `server/apiKey.ts` + `server.ts` (strip empty `.env` so AI Studio Secrets work) |
 
 Do **not** merge transcribe into structure. Structure receives a transcript string, never audio.

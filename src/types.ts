@@ -120,4 +120,6 @@ export interface HealthStatus {
     structure: string;
     vision: string;
   };
+  structureFallbacks?: string[];
+  visionFallbacks?: string[];
 }

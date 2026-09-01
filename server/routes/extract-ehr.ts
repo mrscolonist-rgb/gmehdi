@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { MODELS } from '../config.ts';
-import { formatGeminiError, generateJson, hasApiKey, inlinePart, isQuotaError } from '../gemini.ts';
+import { VISION_MODELS } from '../config.ts';
+import { formatGeminiError, hasApiKey, inlinePart, isQuotaError } from '../gemini.ts';
+import { generateJsonWithFallback } from '../modelFallback.ts';
 import { loadPrompt } from '../prompts.ts';
 import { EHR_SCHEMA } from '../schema.ts';
 
@@ -19,8 +20,8 @@ router.post('/api/extract-ehr', async (req, res) => {
       return res.status(400).json({ error: 'imageBase64 is required' });
     }
 
-    const parsed = await generateJson<Record<string, unknown>>({
-      model: MODELS.vision,
+    const { data: parsed, model } = await generateJsonWithFallback<Record<string, unknown>>({
+      models: VISION_MODELS,
       parts: [
         inlinePart(imageBase64, mimeType),
         { text: loadPrompt('ehr-bp.md') },
@@ -30,6 +31,7 @@ router.post('/api/extract-ehr', async (req, res) => {
 
     res.json({
       success: true,
+      model,
       ehrContext: {
         ...parsed,
         sourceAppName: 'Best Practice (BP Premier)',

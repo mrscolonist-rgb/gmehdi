@@ -3,30 +3,47 @@
  *
  * Transcribe primary: gemini-3.5-transcribe via Interactions API
  *   generation_config.transcription_config (verbatim, non-diarised, en-AU)
- *   per Google GenAI / AI Studio Transcribe docs. Secondary: generateContent
- *   + audioTranscriptionConfig. Fallback: gemini-3.5-flash + prompts/transcribe.md.
+ *   Secondary: generateContent + audioTranscriptionConfig.
+ *   Fallback: Flash + prompts/transcribe.md (not after 429).
  *
- * Structure + BP vision: gemini-3.6-flash.
- * Not Live (gemini-3.5-transcribe-live). Not Batch (unsupported).
+ * Structure / BP / referral: try STRUCTURE_MODELS / VISION_MODELS in order on
+ * 429 only — each Flash family often has a separate free-tier bucket.
+ * Not Live. Not Batch. Prefer Flash over Pro on free tier.
  *
- * Free tier is RPM/RPD/TPM per model — not patients. Long ADHD audio =
- * one STT call per ~6 min chunk (+ Generate / BP). Avoid cascading retries on 429.
- *
- * Chunk ≤6 min stays under Transcribe file-duration limits (~15 min).
+ * Free tier is RPM/RPD/TPM per model — not patients.
  *
  * Docs:
- * https://dev.to/googleai/stop-wrestling-with-asr-the-complete-guide-to-gemini-35-transcribe-1m6i
- * https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/3-5-transcribe
+ * https://ai.google.dev/gemini-api/docs/rate-limits
  * https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-3-5-transcribe/
  */
 export const MODELS = {
   /** Pre-recorded STT (not Live). */
   transcribe: 'gemini-3.5-transcribe',
-  /** Free-tier / outage backup — multimodal Flash + prompt. */
+  /** Non-quota STT backup only. */
   transcribeFallback: 'gemini-3.6-flash',
+  /** Defaults (first entry of the fallback lists). */
   structure: 'gemini-3.6-flash',
   vision: 'gemini-3.6-flash',
 } as const;
+
+/**
+ * Note generation + referral extraction — try next model only on 429 / model missing.
+ * Skip Pro (tighter free quota). Skip unstable aliases like gemini-flash-latest.
+ */
+export const STRUCTURE_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-3.7-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+] as const;
+
+/** BP screenshot vision — same idea, image-capable Flash models. */
+export const VISION_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-3.7-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+] as const;
 
 /** Inline audio+JSON must stay under the Gemini ~20 MB request cap (base64 expands ~4/3). */
 export const MAX_CHUNK_BYTES = 9 * 1024 * 1024;

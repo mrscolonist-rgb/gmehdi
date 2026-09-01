@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { Type } from '@google/genai';
-import { MODELS } from '../config.ts';
-import { generateJson, hasApiKey } from '../gemini.ts';
+import { STRUCTURE_MODELS } from '../config.ts';
+import { formatGeminiError, hasApiKey, isQuotaError } from '../gemini.ts';
+import { generateJsonWithFallback } from '../modelFallback.ts';
 
 const router = Router();
 
@@ -70,8 +71,11 @@ ${transcript.trim()}
 ---
 ${patientContext.trim() ? `ADDITIONAL CONTEXT:\n${patientContext.trim()}` : ''}`;
 
-    const data = await generateJson<{ reasons: string[]; suggestedSpecialty: string }>({
-      model: MODELS.structure,
+    const { data, model } = await generateJsonWithFallback<{
+      reasons: string[];
+      suggestedSpecialty: string;
+    }>({
+      models: STRUCTURE_MODELS,
       parts: [{ text: prompt }],
       schema: SCHEMA,
     });
@@ -83,13 +87,19 @@ ${patientContext.trim() ? `ADDITIONAL CONTEXT:\n${patientContext.trim()}` : ''}`
 
     res.json({
       success: true,
+      model,
       reasons,
       suggestedSpecialty: (data.suggestedSpecialty || '').trim(),
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to extract referral reasons';
+    const message = formatGeminiError(error);
     console.error('extract-referral-reasons error:', error);
-    res.status(500).json({ error: message });
+    const status = isQuotaError(error) || /429|quota/i.test(message)
+      ? 429
+      : /not set|401|rejected the API key/i.test(message)
+        ? 401
+        : 500;
+    res.status(status).json({ error: message });
   }
 });
 
