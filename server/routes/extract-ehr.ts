@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { MODELS } from '../config.ts';
-import { formatGeminiError, generateJson, hasApiKey, inlinePart } from '../gemini.ts';
+import { formatGeminiError, generateJson, hasApiKey, inlinePart, isQuotaError } from '../gemini.ts';
 import { loadPrompt } from '../prompts.ts';
 import { EHR_SCHEMA } from '../schema.ts';
 
@@ -39,7 +39,11 @@ router.post('/api/extract-ehr', async (req, res) => {
   } catch (error: unknown) {
     const message = formatGeminiError(error);
     console.error('EHR extraction error:', error);
-    const status = /not set|401|rejected the API key/i.test(message) ? 401 : 500;
+    const status = isQuotaError(error) || /429|quota/i.test(message)
+      ? 429
+      : /not set|401|rejected the API key/i.test(message)
+        ? 401
+        : 500;
     res.status(status).json({ error: message });
   }
 });

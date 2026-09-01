@@ -21,12 +21,17 @@ export async function transcribeBlobs(
   const failed: number[] = [];
   for (let i = 0; i < chunks.length; i++) {
     onProgress?.(i + 1, chunks.length);
+    // Space chunk calls — free-tier RPM is often ~5–15; ADHD consults have many 6‑min chunks.
+    if (i > 0) await new Promise((r) => setTimeout(r, 2500));
     try {
       const b64 = await blobToBase64(chunks[i]);
       const text = await transcribeChunk(b64, chunks[i].type || mimeType);
       if (text.trim()) parts.push(text.trim());
       else failed.push(i + 1);
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      // Daily/project quota: stop burning more chunks.
+      if (/429|quota exceeded|rate limit/i.test(msg)) throw err;
       // Keep going — one bad chunk must not wipe a long consult.
       failed.push(i + 1);
     }

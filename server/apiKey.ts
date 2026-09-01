@@ -17,12 +17,33 @@ export function clearEmptyEnvKeys(keys: string[] = ['GEMINI_API_KEY', 'GOOGLE_AP
   }
 }
 
-/** Map Google UNAUTHENTICATED / empty-key failures to a clinician-readable message. */
+export function isQuotaError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || '');
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('429') ||
+    lower.includes('resource_exhausted') ||
+    lower.includes('resource exhausted') ||
+    lower.includes('quota') ||
+    lower.includes('rate limit') ||
+    lower.includes('too many requests')
+  );
+}
+
+/** Map Google auth / quota failures to a clinician-readable message. */
 export function formatGeminiError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error || 'Gemini request failed');
   const lower = message.toLowerCase();
   if (!resolveApiKey()) {
     return 'GEMINI_API_KEY is not set. In AI Studio: Secrets → GEMINI_API_KEY. Locally: put the key in .env.local and restart.';
+  }
+  if (isQuotaError(error)) {
+    return (
+      'Gemini free-tier quota exceeded (429). Limits are API requests per minute/day — not patients. ' +
+      'A 30–60 min ADHD consult can use many STT chunk calls, plus Generate / BP / referral. ' +
+      'Wait for the daily reset (midnight Pacific), slow down between patients, or enable billing / check limits in AI Studio. ' +
+      'See https://ai.google.dev/gemini-api/docs/rate-limits'
+    );
   }
   if (
     lower.includes('unauthenticated') ||

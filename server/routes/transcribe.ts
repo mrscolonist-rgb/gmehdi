@@ -1,6 +1,13 @@
 import { Router } from 'express';
 import { MODELS, MAX_CHUNK_BYTES } from '../config.ts';
-import { formatGeminiError, generateText, generateTranscript, hasApiKey, inlinePart } from '../gemini.ts';
+import {
+  formatGeminiError,
+  generateText,
+  generateTranscript,
+  hasApiKey,
+  inlinePart,
+  isQuotaError,
+} from '../gemini.ts';
 import { loadPrompt } from '../prompts.ts';
 
 const router = Router();
@@ -8,7 +15,7 @@ const router = Router();
 /**
  * 1) gemini-3.5-transcribe (Interactions + transcription_config per docs)
  * 2) same model via generateContent audioTranscriptionConfig
- * 3) gemini-3.5-flash + prompts/transcribe.md (free-tier safety net)
+ * 3) Flash + prompts/transcribe.md (only if primary is not a quota error)
  */
 async function transcribeWithFallback(
   payload: string,
@@ -25,6 +32,8 @@ async function transcribeWithFallback(
     }
     console.warn('gemini-3.5-transcribe returned empty; trying Flash fallback');
   } catch (err) {
+    // Further attempts burn more free-tier quota when already rate-limited.
+    if (isQuotaError(err)) throw err;
     console.warn('gemini-3.5-transcribe failed; trying Flash fallback:', err);
   }
 
@@ -71,7 +80,11 @@ router.post('/api/transcribe', async (req, res) => {
   } catch (error: unknown) {
     const message = formatGeminiError(error);
     console.error('Transcription error:', error);
-    const status = /not set|401|rejected the API key/i.test(message) ? 401 : 500;
+    const status = isQuotaError(error) || /429|quota/i.test(message)
+      ? 429
+      : /not set|401|rejected the API key/i.test(message)
+        ? 401
+        : 500;
     res.status(status).json({ error: message });
   }
 });

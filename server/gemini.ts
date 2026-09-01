@@ -3,10 +3,10 @@ import {
   GoogleGenAI,
   type GenerateContentConfig,
 } from '@google/genai';
-import { formatGeminiError, hasApiKey, resolveApiKey } from './apiKey.ts';
+import { formatGeminiError, hasApiKey, isQuotaError, resolveApiKey } from './apiKey.ts';
 import { CLINICAL_VOCAB } from './clinicalVocab.ts';
 
-export { hasApiKey, formatGeminiError } from './apiKey.ts';
+export { hasApiKey, formatGeminiError, isQuotaError } from './apiKey.ts';
 
 let ai: GoogleGenAI | null = null;
 let aiKeyUsed = '';
@@ -126,7 +126,7 @@ async function transcribeViaGenerateContent(opts: {
   return textFromResponse(response);
 }
 
-/** Dedicated STT: Interactions → generateContent AudioTranscriptionConfig. */
+/** Dedicated STT: Interactions → generateContent. Stop cascading on 429 (saves quota). */
 export async function generateTranscript(opts: {
   model: string;
   audioBase64: string;
@@ -140,6 +140,7 @@ export async function generateTranscript(opts: {
     if (text) return text;
     console.warn('Interactions STT returned empty; trying generateContent path');
   } catch (err) {
+    if (isQuotaError(err)) throw new Error(formatGeminiError(err));
     console.warn('Interactions STT failed; trying generateContent path:', err);
   }
   try {

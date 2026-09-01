@@ -41,7 +41,7 @@ Referral letters: same copy helper joins Opening/Body/Closing as paragraph prose
 
 ## Audio length
 
-Long ADHD consults (30–60 min) are split in the browser (`src/utils/audio.ts` + `chunkAudio.ts`) into ~6 min / ~9 MB chunks, transcribed one-by-one. Recording never calls Gemini — only Stop & transcribe / Upload does. STT tries `gemini-3.5-transcribe` then falls back to `gemini-3.5-flash` (`server/routes/transcribe.ts`). A failed chunk must not discard the rest of the transcript.
+Long ADHD consults (30–60 min) are split in the browser (`src/utils/audio.ts` + `chunkAudio.ts`) into ~6 min / ~9 MB chunks, transcribed one-by-one (client waits ~2.5s between chunks to ease free-tier RPM). Recording never calls Gemini — only Stop & transcribe / Upload does. STT tries `gemini-3.5-transcribe` then Flash (`server/routes/transcribe.ts`) — **do not cascade further attempts after a 429**. A failed chunk must not discard the rest of the transcript unless the error is quota exhaustion.
 
 ## Record → Generate (do not collapse)
 

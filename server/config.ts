@@ -6,8 +6,11 @@
  *   per Google GenAI / AI Studio Transcribe docs. Secondary: generateContent
  *   + audioTranscriptionConfig. Fallback: gemini-3.5-flash + prompts/transcribe.md.
  *
- * Structure + BP vision: gemini-3.5-flash.
+ * Structure + BP vision: gemini-3.6-flash.
  * Not Live (gemini-3.5-transcribe-live). Not Batch (unsupported).
+ *
+ * Free tier is RPM/RPD/TPM per model — not patients. Long ADHD audio =
+ * one STT call per ~6 min chunk (+ Generate / BP). Avoid cascading retries on 429.
  *
  * Chunk ≤6 min stays under Transcribe file-duration limits (~15 min).
  *
