@@ -9,7 +9,9 @@ export function hasApiKey(): boolean {
 }
 
 /** Drop blank env values so AI Studio Secrets can inject a real key. */
-export function clearEmptyEnvKeys(keys: string[] = ['GEMINI_API_KEY', 'GOOGLE_API_KEY', 'APP_URL']) {
+export function clearEmptyEnvKeys(
+  keys: string[] = ['GEMINI_API_KEY', 'GOOGLE_API_KEY', 'APP_URL', 'GROQ_API_KEY'],
+) {
   for (const key of keys) {
     if (process.env[key] !== undefined && !String(process.env[key]).trim()) {
       delete process.env[key];
@@ -38,11 +40,13 @@ export function formatGeminiError(error: unknown): string {
     return 'GEMINI_API_KEY is not set. In AI Studio: Secrets → GEMINI_API_KEY. Locally: put the key in .env.local and restart.';
   }
   if (isQuotaError(error)) {
+    const groqHint = !(process.env.GROQ_API_KEY || '').trim()
+      ? ' Add GROQ_API_KEY in .env.local (console.groq.com) so Stop & transcribe fails over to Whisper instead of losing the consult.'
+      : ' Gemini and Groq both hit quota — wait, then retry Stop & transcribe (audio is still on this device until you leave the session).';
     return (
       'Gemini free-tier quota exceeded (429). Limits are API requests per minute/day — not patients. ' +
-      'A 30–60 min ADHD consult can use many STT chunk calls, plus Generate / BP / referral. ' +
-      'Wait for the daily reset (midnight Pacific), slow down between patients, or enable billing / check limits in AI Studio. ' +
-      'See https://ai.google.dev/gemini-api/docs/rate-limits'
+      groqHint +
+      ' See https://ai.google.dev/gemini-api/docs/rate-limits'
     );
   }
   if (

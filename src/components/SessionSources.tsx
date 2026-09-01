@@ -35,6 +35,16 @@ export function SessionSources({ doc }: { doc: ScribeDocument }) {
           <div>
             <p className="text-xs font-semibold text-stone-600">Best Practice capture</p>
             <p className="mt-1 text-xs text-emerald-900">{ehrSummaryLine(doc.ehrContext)}</p>
+            {doc.ehrContext.currentMedications?.length ? (
+              <p className="mt-1 text-[11px] text-stone-700">
+                Rx: {doc.ehrContext.currentMedications.join('; ')}
+              </p>
+            ) : null}
+            {doc.ehrContext.pastMedicalHistory?.length ? (
+              <p className="mt-1 text-[11px] text-stone-700">
+                PMHx: {doc.ehrContext.pastMedicalHistory.join('; ')}
+              </p>
+            ) : null}
           </div>
         ) : null}
         {hasTools ? (

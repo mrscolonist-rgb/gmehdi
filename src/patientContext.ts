@@ -1,6 +1,7 @@
 export type ContextSectionId =
   | 'thisConsult'
   | 'lastSession'
+  | 'meds'
   | 'pmhx'
   | 'investigations'
   | 'letters'
@@ -9,6 +10,7 @@ export type ContextSectionId =
 export interface ContextFields {
   thisConsult: string;
   lastSession: string;
+  meds: string;
   pmhx: string;
   investigations: string;
   letters: string;
@@ -37,6 +39,13 @@ export const CONTEXT_SECTIONS: ContextSectionDef[] = [
     label: 'Last session',
     hint: 'Prior notes for trajectory only. Prior vitals/exam stay out of today’s note.',
     placeholder: 'Paste the previous progress note. Used for comparison and follow-up flow — not copied in.',
+  },
+  {
+    id: 'meds',
+    tag: 'CURRENT_MEDICATIONS',
+    label: 'Meds',
+    hint: 'Current Rx if the BP screenshot missed the list. Standing meds — not a new prescription unless said today.',
+    placeholder: 'e.g. metformin XR 1000 mg nocte, ramipril 5 mg daily…',
   },
   {
     id: 'pmhx',
@@ -75,6 +84,8 @@ const TAG_TO_ID: Record<string, ContextSectionId> = Object.fromEntries(
 const ALIASES: Record<string, ContextSectionId> = {
   PREVIOUS_CONSULTATIONS_PROGRESS_NOTES: 'lastSession',
   PAST_MEDICAL_HISTORY_PMHX_ALLERGIES: 'pmhx',
+  CURRENT_RX: 'meds',
+  MEDICATIONS: 'meds',
   CURRENT_LAB_RADIOLOGY_RESULTS: 'investigations',
   SPECIALIST_LETTERS_EXTERNAL_REPORTS: 'letters',
   ADDITIONAL_NOTES_DIRECTIVES: 'other',
@@ -85,6 +96,7 @@ export function emptyContextFields(): ContextFields {
   return {
     thisConsult: '',
     lastSession: '',
+    meds: '',
     pmhx: '',
     investigations: '',
     letters: '',

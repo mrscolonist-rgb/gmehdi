@@ -114,9 +114,12 @@ export interface SessionGroup {
 export interface HealthStatus {
   status: string;
   hasApiKey: boolean;
+  hasGroqKey?: boolean;
   models?: {
     transcribe: string;
     transcribeFallback?: string;
+    groqStt?: string;
+    groqSttFast?: string;
     structure: string;
     vision: string;
   };

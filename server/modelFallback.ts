@@ -1,5 +1,6 @@
 import type { GenerateContentConfig } from '@google/genai';
-import { formatGeminiError, generateJson, generateText, isQuotaError } from './gemini.ts';
+import { formatGeminiError, generateJson, generateText, hasApiKey, isQuotaError } from './gemini.ts';
+import { generateJsonWithGroq, hasGroqKey, partsHaveImages, partsToText } from './groq.ts';
 
 function shouldTryNextModel(error: unknown): boolean {
   if (isQuotaError(error)) return true;
@@ -16,6 +17,12 @@ export async function generateJsonWithFallback<T>(opts: {
   parts: object[];
   schema: object;
 }): Promise<{ data: T; model: string }> {
+  if (!hasApiKey()) {
+    if (!partsHaveImages(opts.parts) && hasGroqKey()) {
+      return generateJsonWithGroq<T>(partsToText(opts.parts));
+    }
+    throw new Error('GEMINI_API_KEY is not set');
+  }
   const models = [...new Set(opts.models.map((m) => m.trim()).filter(Boolean))];
   if (!models.length) throw new Error('No models configured for generateJsonWithFallback');
 
@@ -33,12 +40,19 @@ export async function generateJsonWithFallback<T>(opts: {
     } catch (err) {
       lastError = err;
       const more = i < models.length - 1;
-      if (more && shouldTryNextModel(err)) {
-        console.warn(`Model ${model} failed (${isQuotaError(err) ? 'quota' : 'unavailable'}); trying ${models[i + 1]}`);
-        continue;
+      if (shouldTryNextModel(err)) {
+        if (more) {
+          console.warn(`Model ${model} failed (${isQuotaError(err) ? 'quota' : 'unavailable'}); trying ${models[i + 1]}`);
+          continue;
+        }
+        break;
       }
       throw err instanceof Error ? err : new Error(formatGeminiError(err));
     }
+  }
+  if (!partsHaveImages(opts.parts) && hasGroqKey()) {
+    console.warn('Gemini structure exhausted; trying Groq LLM');
+    return generateJsonWithGroq<T>(partsToText(opts.parts));
   }
   throw lastError instanceof Error ? lastError : new Error(formatGeminiError(lastError));
 }

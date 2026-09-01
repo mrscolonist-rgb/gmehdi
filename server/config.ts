@@ -1,48 +1,63 @@
 /**
- * Model IDs — edit this file only to change Gemini models in AI Studio.
+ * Model IDs — edit this file only to change models.
  *
- * Transcribe primary: gemini-3.5-transcribe via Interactions API
- *   generation_config.transcription_config (verbatim, non-diarised, en-AU)
- *   Secondary: generateContent + audioTranscriptionConfig.
- *   Fallback: Flash + prompts/transcribe.md (not after 429).
+ * STT primary: gemini-3.5-transcribe
+ * STT backup: Groq whisper-large-v3 (+ medical prompt + optional polish)
  *
- * Structure / BP / referral: try STRUCTURE_MODELS / VISION_MODELS in order on
- * 429 only — each Flash family often has a separate free-tier bucket.
- * Not Live. Not Batch. Prefer Flash over Pro on free tier.
+ * Structure / BP: try STRUCTURE_MODELS / VISION_MODELS in order on 429.
+ * Prefer gemini-3.7-flash first (stronger on long ADHD / complex prompts).
  *
- * Free tier is RPM/RPD/TPM per model — not patients.
+ * Groq LLM last resort after all Gemini Flash buckets: gpt-oss then Qwen
+ * (no Llama — weaker on complex clinical note JSON).
  *
- * Docs:
- * https://ai.google.dev/gemini-api/docs/rate-limits
- * https://blog.google/innovation-and-ai/models-and-research/gemini-models/gemini-3-5-transcribe/
+ * Free tier is RPM/RPD/TPM per model — not patients. Multi-model cascade
+ * spreads load across separate free-tier buckets when available.
  */
 export const MODELS = {
   /** Pre-recorded STT (not Live). */
   transcribe: 'gemini-3.5-transcribe',
-  /** Non-quota STT backup only. */
+  /** Non-quota STT backup only (Gemini audio→text). */
   transcribeFallback: 'gemini-3.6-flash',
   /** Defaults (first entry of the fallback lists). */
-  structure: 'gemini-3.6-flash',
-  vision: 'gemini-3.6-flash',
+  structure: 'gemini-3.7-flash',
+  vision: 'gemini-3.7-flash',
+  /** Groq Whisper — when Gemini STT 429s or Gemini key missing. */
+  groqStt: 'whisper-large-v3',
+  groqSttFast: 'whisper-large-v3-turbo',
+  /** Light Groq chat pass after Whisper — spelling/terms only, not new facts. */
+  groqPolish: 'openai/gpt-oss-20b',
 } as const;
 
 /**
- * Note generation + referral extraction — try next model only on 429 / model missing.
- * Skip Pro (tighter free quota). Skip unstable aliases like gemini-flash-latest.
+ * Note generation + referral — try next only on 429 / model missing.
+ * 3.7 first for long ADHD / complex style prompts; then other Flash buckets.
  */
 export const STRUCTURE_MODELS = [
-  'gemini-3.6-flash',
   'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
   'gemini-3.5-flash-lite',
   'gemini-3.1-flash-lite',
 ] as const;
 
-/** BP screenshot vision — same idea, image-capable Flash models. */
+/** BP screenshot vision — same cascade idea. */
 export const VISION_MODELS = [
-  'gemini-3.6-flash',
   'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
   'gemini-3.5-flash-lite',
   'gemini-3.1-flash-lite',
+] as const;
+
+/**
+ * Groq chat after every Gemini structure Flash bucket is exhausted.
+ * gpt-oss-120b: reasoning + HealthBench + strict JSON on Groq.
+ * Qwen 3.6: thinking mode for complex prompts (preview).
+ */
+export const GROQ_STRUCTURE_MODELS = [
+  'openai/gpt-oss-120b',
+  'qwen/qwen3.6-27b',
+  'openai/gpt-oss-20b',
 ] as const;
 
 /** Inline audio+JSON must stay under the Gemini ~20 MB request cap (base64 expands ~4/3). */

@@ -13,6 +13,11 @@ The clinician labelled each block. Follow the tag. Do not merge tags. When a tag
 - NEVER treat last-session findings as if they were performed or reviewed today.
 - You may allude in History/plan only when the doctor’s talk today is a follow-up of that trajectory (no copied numbers unless restated today).
 
+[CURRENT_MEDICATIONS]
+- Standing current Rx from the file (or paste if the screenshot missed Current Rx).
+- Map to medications / current treatment in GPCCMP and H&P when those sections exist.
+- Do not invent doses. Do not treat this list as a new script unless the transcript says a change was made today.
+
 [PMHX_ALLERGIES]
 - Standing background. Map to Background / PMHx / Allergies if the template creates those sections.
 - Not today’s examination. Do not list these as current exam findings.

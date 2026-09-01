@@ -180,17 +180,15 @@ export function Studio({
 
       {mode !== 'derive' ? (
         <div className="space-y-2">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:items-stretch">
-            <Recorder
-              disabled={!canRecord}
-              onAudio={(blobs, mimeType, durationSec) => {
-                void handleAudio(blobs, mimeType, durationSec).catch(() => {
-                  /* sttError set in handleAudio */
-                });
-              }}
-            />
-            <BpScreenCapture ehr={ehr} onChange={setEhr} />
-          </div>
+          <Recorder
+            disabled={!canRecord}
+            onAudio={(blobs, mimeType, durationSec) => {
+              void handleAudio(blobs, mimeType, durationSec).catch(() => {
+                /* sttError set in handleAudio */
+              });
+            }}
+          />
+          <BpScreenCapture ehr={ehr} onChange={setEhr} />
           {sttError ? (
             <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               {sttError}

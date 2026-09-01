@@ -3,6 +3,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { clearEmptyEnvKeys, hasApiKey } from './server/apiKey.ts';
+import { hasGroqKey } from './server/groq.ts';
 import { JSON_BODY_LIMIT, PORT } from './server/config.ts';
 import health from './server/routes/health.ts';
 import transcribe from './server/routes/transcribe.ts';
@@ -46,6 +47,11 @@ async function startServer() {
       hasApiKey()
         ? 'GEMINI_API_KEY detected'
         : 'GEMINI_API_KEY missing — set AI Studio Secret or .env.local, then restart',
+    );
+    console.log(
+      hasGroqKey()
+        ? 'GROQ_API_KEY detected — Whisper backup for STT 429s'
+        : 'GROQ_API_KEY missing — Gemini 429 will fail Stop & transcribe',
     );
   });
 }

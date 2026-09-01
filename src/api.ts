@@ -75,11 +75,18 @@ export async function extractReferralReasons(input: {
   return parseJson<{ reasons: string[]; suggestedSpecialty: string }>(res);
 }
 
-export async function extractEhr(imageBase64: string, mimeType = 'image/jpeg'): Promise<EhrContext> {
+export async function extractEhr(
+  frames: { pane: string; imageBase64: string; mimeType?: string }[] | string,
+  mimeType = 'image/jpeg',
+): Promise<EhrContext> {
+  const list =
+    typeof frames === 'string'
+      ? [{ pane: 'fullView', imageBase64: frames, mimeType }]
+      : frames;
   const res = await fetch('/api/extract-ehr', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageBase64, mimeType }),
+    body: JSON.stringify({ frames: list }),
   });
   const data = await parseJson<{ ehrContext: EhrContext }>(res);
   return data.ehrContext;

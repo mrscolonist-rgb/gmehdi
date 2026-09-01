@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Type } from '@google/genai';
 import { STRUCTURE_MODELS } from '../config.ts';
 import { formatGeminiError, hasApiKey, isQuotaError } from '../gemini.ts';
+import { hasGroqKey } from '../groq.ts';
 import { generateJsonWithFallback } from '../modelFallback.ts';
 
 const router = Router();
@@ -25,8 +26,10 @@ const SCHEMA = {
 
 router.post('/api/extract-referral-reasons', async (req, res) => {
   try {
-    if (!hasApiKey()) {
-      return res.status(503).json({ error: 'GEMINI_API_KEY is not set' });
+    if (!hasApiKey() && !hasGroqKey()) {
+      return res.status(503).json({
+        error: 'Set GEMINI_API_KEY and/or GROQ_API_KEY in .env.local, then restart.',
+      });
     }
     const {
       transcript = '',

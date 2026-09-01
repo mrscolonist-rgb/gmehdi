@@ -7,25 +7,62 @@ import { EHR_SCHEMA } from '../schema.ts';
 
 const router = Router();
 
+type FrameIn = { pane?: string; imageBase64?: string; mimeType?: string };
+
+function collectFrames(body: {
+  imageBase64?: string;
+  mimeType?: string;
+  frames?: FrameIn[];
+}): { pane: string; imageBase64: string; mimeType: string }[] {
+  const fromList = (body.frames || [])
+    .filter((f) => Boolean(f.imageBase64))
+    .map((f, i) => ({
+      pane: (f.pane || `frame${i + 1}`).trim() || `frame${i + 1}`,
+      imageBase64: f.imageBase64 as string,
+      mimeType: f.mimeType || body.mimeType || 'image/jpeg',
+    }));
+  if (fromList.length) return fromList.slice(0, 4);
+  if (body.imageBase64) {
+    return [
+      {
+        pane: 'fullView',
+        imageBase64: body.imageBase64,
+        mimeType: body.mimeType || 'image/jpeg',
+      },
+    ];
+  }
+  return [];
+}
+
 router.post('/api/extract-ehr', async (req, res) => {
   try {
     if (!hasApiKey()) {
-      return res.status(503).json({ error: 'GEMINI_API_KEY is not set' });
+      return res.status(503).json({
+        error:
+          'BP screenshot needs GEMINI_API_KEY (vision). Paste Current Rx / PMHx under Patient context Meds and PMHx if Gemini is down.',
+      });
     }
-    const { imageBase64, mimeType = 'image/jpeg' } = req.body as {
+    const frames = collectFrames(req.body as {
       imageBase64?: string;
       mimeType?: string;
-    };
-    if (!imageBase64) {
-      return res.status(400).json({ error: 'imageBase64 is required' });
+      frames?: FrameIn[];
+    });
+    if (!frames.length) {
+      return res.status(400).json({ error: 'imageBase64 or frames[] is required' });
     }
+
+    const parts: object[] = [];
+    frames.forEach((f, i) => {
+      parts.push({
+        text: `Frame ${i + 1} BP pane: ${f.pane}. OCR this still only; merge facts across frames.`,
+      });
+      parts.push(inlinePart(f.imageBase64, f.mimeType));
+    });
+    parts.push({ text: loadPrompt('ehr-bp.md') });
 
     const { data: parsed, model } = await generateJsonWithFallback<Record<string, unknown>>({
       models: VISION_MODELS,
-      parts: [
-        inlinePart(imageBase64, mimeType),
-        { text: loadPrompt('ehr-bp.md') },
-      ],
+      parts,
       schema: EHR_SCHEMA,
     });
 
