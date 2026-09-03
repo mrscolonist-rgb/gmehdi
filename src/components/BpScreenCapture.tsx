@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Camera, Loader2, X } from 'lucide-react';
 import type { EhrContext } from '../types.ts';
 import { extractEhr } from '../api.ts';
@@ -24,8 +24,16 @@ export function BpScreenCapture({ ehr, onChange }: Props) {
   const [error, setError] = useState('');
   const [share, setShare] = useState<BpShare | null>(null);
   const [grabs, setGrabs] = useState<Grabs>({});
+  const previewRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => () => share?.stop(), [share]);
+
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    el.srcObject = share?.stream ?? null;
+    if (share) void el.play().catch(() => undefined);
+  }, [share]);
 
   async function beginShare() {
     setError('');
@@ -95,9 +103,10 @@ export function BpScreenCapture({ ehr, onChange }: Props) {
         <div>
           <p className="text-sm font-medium">Best Practice screen</p>
           <p className="text-xs text-stone-500">
-            Share BP once. Open each pane in Premier, then grab it. Extract needs{' '}
-            <span className="font-medium text-stone-700">Current Rx + Past history</span> (banner
-            alone is not enough).
+            On Windows pick <span className="font-medium text-stone-700">Entire screen</span> (the
+            BP monitor), not Window — native Premier often shares as a black frame. Then open each
+            pane and grab. Extract needs{' '}
+            <span className="font-medium text-stone-700">Current Rx + Past history</span>.
           </p>
         </div>
         {ehr && !share ? (
@@ -130,6 +139,16 @@ export function BpScreenCapture({ ehr, onChange }: Props) {
 
       {share ? (
         <div className="mt-2 flex flex-col gap-1.5">
+          <video
+            ref={previewRef}
+            muted
+            playsInline
+            className="h-24 w-full rounded-lg border border-stone-200 bg-black object-contain"
+            aria-label="Live share preview"
+          />
+          <p className="text-[11px] text-stone-500">
+            If this preview is black, Cancel and share Entire screen — not the BP window.
+          </p>
           {BP_PANES.map((p) => (
             <button
               key={p.id}
